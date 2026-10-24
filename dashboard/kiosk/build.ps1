@@ -22,18 +22,16 @@ function Run($exe, [string[]]$a) {
 }
 
 # Optional: $env:KIOSK_SITE = <dir> bundles a static site, served at http://127.0.0.1:8765/ (README).
-$assets = @()
 if ($env:KIOSK_SITE) {
   if (-not (Test-Path (Join-Path $env:KIOSK_SITE 'index.html'))) { throw "KIOSK_SITE has no index.html: $env:KIOSK_SITE" }
   New-Item -ItemType Directory build\assets\site | Out-Null
   Copy-Item -Recurse -Path (Join-Path $env:KIOSK_SITE '*') -Destination build\assets\site
-  $assets = @('-A', 'build\assets')
   Write-Output "Bundling $env:KIOSK_SITE as http://127.0.0.1:8765/"
 }
 
 Run "$bt\aapt2.exe" @('compile', '--dir', 'res', '-o', 'build\res.zip')
 # Target 28: see build.sh.
-Run "$bt\aapt2.exe" (@('link', '-o', 'build\base.apk', '-I', $jar, '--manifest', 'AndroidManifest.xml') + $assets + @('build\res.zip',
+Run "$bt\aapt2.exe" (@('link', '-o', 'build\base.apk', '-I', $jar, '--manifest', 'AndroidManifest.xml', 'build\res.zip',
   '--java', 'build\gen', '--min-sdk-version', '23', '--target-sdk-version', '28', '--version-code', '2', '--version-name', '1.1'))
 
 $src = @(Get-ChildItem src -Recurse -Filter *.java | % FullName) + @('build\gen\com\wesbos\homehq\R.java')
@@ -46,6 +44,15 @@ Run "$bt\d8.bat" (@('--min-api', '23', '--lib', $jar, '--output', 'build') + $cl
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [IO.Compression.ZipFile]::Open((Resolve-Path build\base.apk), 'Update')
 [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Resolve-Path build\classes.dex), 'classes.dex') | Out-Null
+# The bundled site goes in here too: aapt2 -A on Windows names entries with backslashes
+# (assets/site\index.html), which Android's AssetManager can't open.
+if (Test-Path build\assets) {
+  $root = (Resolve-Path build\assets).Path
+  Get-ChildItem build\assets -Recurse -File | % {
+    $name = 'assets/' + $_.FullName.Substring($root.Length + 1).Replace('\', '/')
+    [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $name) | Out-Null
+  }
+}
 $zip.Dispose()
 
 Run "$bt\zipalign.exe" @('-f', '4', 'build\base.apk', 'build\aligned.apk')
