@@ -2,3 +2,8 @@ node_modules
 dist
 .wrangler
 kiosk/build
+
+# Local Worker secrets (wrangler). Real values live in Proton Pass.
+.dev.vars*
+# Private settings, linked in from the private repo. No trailing slash, so a link is ignored too.
+/private
