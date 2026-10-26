@@ -333,7 +333,8 @@
 
   // ------------------------------------------------------------ boot
   App.start = function () {
-    App.setTime(15, 18); // demo default: a busy weekday afternoon
+    // Real time by default; ?demo starts on a busy weekday afternoon for showing the prototype.
+    if (/[?&]demo\b/.test(location.search)) App.setTime(15, 18);
     fit();
     window.addEventListener('resize', fit);
     // Switch tabs the instant a finger lands (pointerdown), not on release. Keyboard "clicks"
