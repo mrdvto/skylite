@@ -29,6 +29,21 @@ root or additional permissions. The button and physical single-tap interaction w
 in a local adaptation on the [QCREA YYD-1156](../../docs/qcrea-yyd-1156.md); the saved opt-in is
 the shared-kiosk version of that adaptation.
 
+## Portrait panels
+
+The kiosk runs landscape (`sensorLandscape`) by default. For a panel mounted portrait, make it
+follow the system rotation, then lock that rotation (0 is the natural orientation of an
+800×1280 panel; use 2 if the picture is upside down):
+
+```sh
+adb shell am start -n com.wesbos.homehq/.MainActivity --es orientation user
+adb shell settings put system accelerometer_rotation 0
+adb shell settings put system user_rotation 0
+```
+
+The choice survives later launches. `--es orientation landscape` goes back to the default.
+Check touch in all four corners afterwards: some panels map touch for one rotation only.
+
 ## Dashboard URL
 
 The kiosk opens the hosted demo dashboard by default. To show your own, save its URL once:
