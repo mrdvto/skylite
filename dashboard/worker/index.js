@@ -6,7 +6,8 @@
 // GOOGLE_REFRESH_TOKEN, TODOIST_TOKEN, ACCESS_TEAM_DOMAIN, ACCESS_AUD.
 // MOCK=1 (local only: `wrangler dev --var MOCK:1`) answers from mock.js instead; MOCK=calendar
 // (local only, `npm run worker:todoist`) mocks only Google Calendar, with live Todoist and
-// Open-Meteo, and needs only TODOIST_TOKEN.
+// Open-Meteo, and needs only TODOIST_TOKEN. LOCAL=1 (local only, `npm run worker:live`) is fully
+// live but skips Access on localhost, and needs only the Google and Todoist secrets.
 import S from './settings.gen.json';
 import { verifyAccess } from './access.js';
 import { mockSource } from './mock.js';
@@ -21,7 +22,8 @@ const HEADERS = {
 };
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: HEADERS });
-const LIVE_SECRETS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN', 'TODOIST_TOKEN', 'ACCESS_TEAM_DOMAIN', 'ACCESS_AUD'];
+const DATA_SECRETS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN', 'TODOIST_TOKEN'];
+const LIVE_SECRETS = [...DATA_SECRETS, 'ACCESS_TEAM_DOMAIN', 'ACCESS_AUD'];
 
 const MOCKS = ['1', 'calendar'];
 
@@ -64,14 +66,18 @@ function config(env) {
 async function api(request, env, url) {
   const mock = MOCKS.includes(env.MOCK);
   // Access JWT check first (before saying anything about configuration). Live mode needs it; a
-  // local mock run without the Access settings skips it, and MOCK=calendar (real Todoist data)
-  // only on localhost.
+  // local mock run without the Access settings skips it, and the runs on real data (MOCK=calendar,
+  // LOCAL=1) skip it only on localhost.
   const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-  if (env.ACCESS_AUD || !mock || (env.MOCK === 'calendar' && !local)) {
+  const real = env.MOCK === 'calendar' ? 'calendar' : !mock && env.LOCAL === '1' ? 'live' : null;
+  if (env.ACCESS_AUD || (!mock && !real) || (real && !local)) {
     if (!(await verifyAccess(request, env))) return json({ error: 'unauthorized' }, 401);
   }
-  if (!mock && LIVE_SECRETS.some((k) => !env[k])) return json({ error: 'not configured' }, 503);
-  if (env.MOCK === 'calendar' && !env.TODOIST_TOKEN) return json({ error: 'not configured' }, 503);
+  let needed = LIVE_SECRETS;
+  if (real === 'calendar') needed = ['TODOIST_TOKEN'];
+  else if (mock) needed = [];
+  else if (real && local && !env.ACCESS_AUD) needed = DATA_SECRETS;
+  if (needed.some((k) => !env[k])) return json({ error: 'not configured' }, 503);
   const src = source(env), path = url.pathname, method = request.method;
   let m;
   if (method === 'GET') {

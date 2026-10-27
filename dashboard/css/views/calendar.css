@@ -73,7 +73,6 @@
 .ev.is-half .ev-title { padding-right: 0; }
 .ev.is-past { opacity: .38; }
 .ev.is-now { box-shadow: 0 0 0 3px var(--paper), 0 0 0 6px var(--c); z-index: 2; }
-.ev.is-family { background: var(--ink); color: #fff; }
 .ev--more {
   background: var(--paper); color: var(--ink);
   border: 2px dashed var(--ink-2);
