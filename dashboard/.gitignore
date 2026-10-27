@@ -7,3 +7,5 @@ kiosk/build
 .dev.vars*
 # Private settings, linked in from the private repo. No trailing slash, so a link is ignored too.
 /private
+# Worker settings picked at build time (private copy when linked in)
+worker/settings.gen.json

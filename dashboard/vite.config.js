@@ -9,5 +9,6 @@ export default defineConfig({
     target: 'chrome106',
     cssTarget: 'chrome61',
   },
-  server: { host: true },
+  // `npm run dev` talks to a local Worker (`npm run worker`, mock data) for /api.
+  server: { host: true, proxy: { '/api': 'http://127.0.0.1:8787' } },
 });
