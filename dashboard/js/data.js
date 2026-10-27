@@ -1,350 +1,194 @@
-// Mock data for the prototype. Everything is relative to "today" so the demo always looks current.
-window.DATA = (function () {
-  var base = new Date();
-  base.setHours(0, 0, 0, 0);
-
-  function at(d, hm) {
-    var p = hm.split(':');
-    var x = new Date(base);
-    x.setDate(x.getDate() + d);
-    x.setHours(+p[0], +p[1], 0, 0);
-    return x;
-  }
-  var n = 0;
-  function ev(d, s, e, title, people, extra) {
-    return Object.assign({ id: 'e' + (++n), start: at(d, s), end: at(d, e), title: title, people: people }, extra || {});
-  }
-  function allDay(d, days, title, people, extra) {
-    return Object.assign({ id: 'e' + (++n), allDay: true, start: at(d, '00:00'), end: at(d + days, '00:00'), title: title, people: people }, extra || {});
-  }
-
-  var ALL = ['alex', 'jordan', 'maya', 'otto'];
-
-  var people = [
-    { id: 'alex', name: 'Wes', color: '#2D5BFF', rgb: '45 91 255', ink: '#FFFFFF', home: false, status: 'Driving home', eta: 12 },
-    { id: 'jordan', name: 'Claudia', color: '#E4007C', rgb: '228 0 124', ink: '#FFFFFF', home: false, status: 'At the office' },
-    { id: 'maya', name: 'Buzzsaw', age: 10, color: '#00A36C', rgb: '0 163 108', ink: '#FFFFFF', home: true, status: 'Home' },
-    { id: 'otto', name: 'Skidmark', age: 6, color: '#FFB000', rgb: '255 176 0', ink: '#111111', home: true, status: 'Home' }
-  ];
-  var family = { id: 'family', name: 'Family', color: '#111111', rgb: '17 17 17', ink: '#FFFFFF' };
-
-  // ---------------------------------------------------------------- calendar
-  var events = [
-    // Today
-    allDay(0, 1, 'Pajama Day at school', ['otto']),
-    allDay(0, 1, 'Garbage + recycling night', ALL),
-    ev(0, '07:00', '07:45', 'Gym', ['jordan'], { loc: 'Iron Works' }),
-    ev(0, '08:15', '08:40', 'School drop-off', ['alex'], { travel: 10, loc: 'Parkdale Elementary' }),
-    ev(0, '09:30', '10:30', 'Design review', ['jordan'], { loc: 'Office · Room 4B' }),
-    ev(0, '12:00', '12:45', 'Dentist', ['maya', 'jordan'], { travel: 15, loc: 'Bright Smiles Dental' }),
-    ev(0, '13:00', '14:00', 'Lunch with Sam', ['alex'], { loc: 'Café Rustica' }),
-    ev(0, '15:45', '16:30', 'Piano lesson', ['otto'], { travel: 12, loc: "Ms. Park's Studio", notes: 'Bring the blue theory book.' }),
-    ev(0, '16:05', '16:30', 'Drive Buzzsaw to soccer', ['jordan']),
-    ev(0, '16:25', '16:50', 'Pick up Skidmark', ['jordan'], { loc: "Ms. Park's Studio" }),
-    ev(0, '16:30', '18:00', 'Soccer practice', ['maya'], { travel: 20, loc: 'Lakeshore Fields', notes: 'Shin guards + water bottle. Rain likely — pack a jacket.' }),
-    ev(0, '17:00', '17:30', 'Parent–teacher call', ['alex', 'jordan'], { loc: 'Zoom' }),
-    ev(0, '18:30', '19:30', "Dinner at Nonna's", ALL, { travel: 20, loc: "Nonna's", notes: 'Bring the lemon cake.' }),
-    ev(0, '20:00', '20:30', 'Bath + books', ['otto']),
-
-    // Tomorrow → +6
-    allDay(1, 3, 'Wes in Montréal', ['alex'], { loc: 'Hotel William Gray' }),
-    ev(1, '07:00', '07:45', 'Gym', ['jordan'], { loc: 'Iron Works' }),
-    ev(1, '08:15', '08:40', 'School drop-off', ['jordan'], { travel: 10 }),
-    ev(1, '10:30', '11:15', 'Vet — Biscuit', ['jordan'], { travel: 10, loc: 'Riverdale Animal Clinic' }),
-    ev(1, '15:30', '16:30', 'Art club', ['maya'], { loc: 'School' }),
-    ev(1, '16:00', '18:00', 'Playdate with Leo', ['otto'], { travel: 8, loc: "Leo's house" }),
-    ev(1, '19:00', '21:00', 'Book club', ['jordan'], { travel: 10, loc: "Priya's" }),
-
-    ev(2, '09:00', '14:00', 'Science Centre trip', ['otto'], { loc: 'Ontario Science Centre' }),
-    ev(2, '13:00', '13:45', 'Haircuts', ['maya', 'otto'], { travel: 10, loc: 'Snip Snip Kids' }),
-    ev(2, '16:30', '18:00', 'Soccer practice', ['maya'], { travel: 20, loc: 'Lakeshore Fields' }),
-    ev(2, '18:00', '19:30', 'Pizza night', ALL),
-
-    ev(3, '10:00', '10:45', 'Swim lessons', ['otto'], { travel: 12, loc: 'Wellesley Pool' }),
-    ev(3, '11:00', '12:00', 'Grocery run', ['jordan']),
-    ev(3, '13:00', '15:30', "Zoe's birthday party", ['maya'], { travel: 15, loc: 'Pottery Place' }),
-    ev(3, '19:00', '21:00', 'Movie night', ALL),
-
-    ev(4, '10:30', '12:00', 'Sunday brunch', ALL, { travel: 15, loc: 'Lady Marmalade' }),
-    ev(4, '17:05', '18:20', 'Flight home · AC 418', ['alex'], { loc: 'YUL → YYZ' }),
-
-    ev(5, '07:00', '07:45', 'Gym', ['jordan']),
-    ev(5, '15:45', '16:30', 'Piano lesson', ['otto'], { travel: 12 }),
-    ev(5, '16:30', '18:00', 'Soccer practice', ['maya'], { travel: 20 }),
-    ev(5, '19:00', '20:00', 'Yoga', ['jordan']),
-
-    allDay(6, 2, 'Grandma visits', ALL),
-    ev(6, '09:00', '09:45', 'Dentist', ['otto'], { travel: 15, loc: 'Bright Smiles Dental' }),
-    ev(6, '16:30', '18:00', 'Soccer practice', ['maya'], { travel: 20 })
-  ];
-
-  // Background recurring events so the month view has texture
-  for (var d = -40; d <= 45; d++) {
-    if (d >= 0 && d <= 6) continue;
-    var dow = new Date(at(d, '00:00')).getDay();
-    if (dow === 1) events.push(ev(d, '15:45', '16:30', 'Piano lesson', ['otto']));
-    if (dow === 2 || dow === 4) events.push(ev(d, '16:30', '18:00', 'Soccer practice', ['maya']));
-    if (dow === 3) events.push(ev(d, '19:00', '20:00', 'Yoga', ['jordan']));
-    if (dow === 6) events.push(ev(d, '10:00', '10:45', 'Swim lessons', ['otto']));
-    if (dow === 0) events.push(ev(d, '17:30', '19:30', "Dinner at Nonna's", ALL));
-    if (dow === 5 && d % 2 === 0) events.push(ev(d, '18:00', '19:30', 'Pizza night', ALL));
-    if (d % 9 === 0) events.push(ev(d, '12:00', '13:00', 'Lunch meeting', ['alex']));
-    if (d % 11 === 0) events.push(ev(d, '09:00', '10:00', 'Doctor', ['jordan']));
-  }
-  events.push(allDay(12, 1, "Buzzsaw's birthday 🎂", ALL));
-  events.push(allDay(-8, 3, 'Cottage weekend', ALL));
-
-  // Extra events for the "overloaded day" demo
-  var busyExtras = [
-    ev(0, '10:00', '11:00', 'Plumber window', ['jordan']),
-    ev(0, '11:00', '11:30', 'Call with bank', ['alex']),
-    ev(0, '14:30', '15:30', 'Library volunteer', ['jordan']),
-    ev(0, '15:30', '16:00', 'Snack prep', ['maya']),
-    ev(0, '16:00', '16:45', 'Math tutor', ['otto']),
-    ev(0, '16:15', '17:00', 'Swim make-up', ['otto'], { travel: 10 }),
-    ev(0, '19:45', '20:30', 'Bake sale prep', ['maya', 'jordan']),
-    ev(0, '20:30', '21:30', 'Hockey', ['alex'], { travel: 15 })
-  ];
-
-  // ---------------------------------------------------------------- chores
-  var routines = [
-    { id: 'morning', name: 'Morning', range: '6 – 11 AM', from: 0, to: 11 },
-    { id: 'after', name: 'After school', range: '11 AM – 5 PM', from: 11, to: 17 },
-    { id: 'evening', name: 'Evening', range: '5 – 10 PM', from: 17, to: 24 }
-  ];
-  var cid = 0;
-  function chore(r, who, title, emoji, stars, done, extra) {
-    return Object.assign({ id: 'c' + (++cid), r: r, who: who, title: title, emoji: emoji, stars: stars, done: !!done }, extra || {});
-  }
-  var chores = [
-    chore('morning', 'maya', 'Make bed', '🛏️', 1, true),
-    chore('morning', 'maya', 'Brush teeth', '🪥', 1, true),
-    chore('morning', 'maya', 'Pack backpack', '🎒', 1, true),
-    chore('morning', 'otto', 'Make bed', '🛏️', 1, true),
-    chore('morning', 'otto', 'Brush teeth', '🪥', 1, true),
-    chore('morning', 'otto', 'Get dressed', '👕', 1, false),
-    chore('morning', 'alex', 'School drop-off', '🚗', 0, true),
-    chore('morning', 'jordan', 'Pack lunches', '🥪', 0, true),
-    chore('morning', 'any', 'Feed Biscuit', '🐶', 1, true),
-
-    chore('after', 'maya', 'Unpack lunchbox', '🥪', 1, true),
-    chore('after', 'maya', 'Homework', '📚', 2, false),
-    chore('after', 'maya', 'Pack soccer bag', '⚽', 1, false),
-    chore('after', 'otto', 'Unpack lunchbox', '🥪', 1, true),
-    chore('after', 'otto', 'Read for 20 min', '📖', 2, false),
-    chore('after', 'otto', 'Practice piano', '🎹', 2, false),
-    chore('after', 'otto', 'Tidy the Lego', '🧱', 1, false),
-    chore('after', 'alex', 'Take out recycling', '♻️', 0, false, { overdue: true }),
-    chore('after', 'alex', 'Call the plumber', '☎️', 0, true),
-    chore('after', 'jordan', 'Fold laundry', '🧺', 0, false),
-    chore('after', 'jordan', 'Order Zoe’s gift', '🎁', 0, true),
-    chore('after', 'any', 'Water the plants', '🪴', 1, false),
-    chore('after', 'any', 'Empty dishwasher', '🍽️', 2, false),
-    chore('after', 'any', 'Walk Biscuit', '🐕', 2, true),
-
-    chore('evening', 'maya', 'Set the table', '🍴', 1, false),
-    chore('evening', 'maya', 'Lay out clothes', '👕', 1, false),
-    chore('evening', 'maya', 'Shower', '🚿', 1, false),
-    chore('evening', 'otto', 'Clear plates', '🍽️', 1, false),
-    chore('evening', 'otto', 'Bath', '🛁', 1, false),
-    chore('evening', 'otto', 'Lay out clothes', '👕', 1, false),
-    chore('evening', 'alex', 'Lock up', '🔐', 0, false),
-    chore('evening', 'jordan', 'Run dishwasher', '🫧', 0, false),
-    chore('evening', 'any', 'Wipe counters', '🧽', 1, false),
-    chore('evening', 'any', 'Garbage to curb', '🗑️', 2, false)
-  ];
-  var stars = { maya: 42, otto: 57 };
-  // Mon..Sun, 1 = all chores done, 0 = missed, null = future
-  var week = { maya: [1, 1, 0, 1, 1, 0, 1], otto: [1, 0, 1, 1, 1, 1, 0] };
-
-  // ---------------------------------------------------------------- shopping
-  var stores = [{ id: 'grocer', name: 'FreshCo' }, { id: 'costco', name: 'Costco' }];
-  var catOrder = {
-    all: ['Produce', 'Bakery', 'Meat & Fish', 'Dairy & Eggs', 'Pantry', 'Frozen', 'Snacks', 'Household'],
-    grocer: ['Produce', 'Bakery', 'Meat & Fish', 'Dairy & Eggs', 'Pantry', 'Frozen', 'Snacks', 'Household'],
-    costco: ['Household', 'Pantry', 'Snacks', 'Dairy & Eggs', 'Meat & Fish', 'Frozen', 'Produce', 'Bakery']
+// Live data from the Worker (/api/*). The last good copy stays in memory only, so the panel keeps
+// showing it when the network or a service drops; nothing is stored on the device. Each section
+// re-fetches on its own interval and right after this panel writes to it, so ticks made on the
+// other frame or on phones show up within the interval.
+(function () {
+  'use strict';
+  var S = App.data = {
+    config: null, calendars: [], events: [], chores: null, shopping: null, weather: null,
+    net: { since: null, auth: false, trouble: {} }
   };
-  var gid = 0;
-  function g(name, cat, qty, store, done, note) {
-    return { id: 'g' + (++gid), name: name, cat: cat, qty: qty, store: store, done: !!done, note: note || '' };
+  var EVERY = { chores: 30e3, shopping: 30e3, calendar: 120e3, weather: 15 * 60e3 };
+  var last = {}, busy = {};
+  // Writes in flight: id -> desired state, laid over fetched data so a refresh that started
+  // before the write landed cannot flip the tick back.
+  var pending = { chores: {}, shopping: {} };
+
+  function parseDay(s) { var p = s.split('-'); return new Date(+p[0], p[1] - 1, +p[2]); }
+  function parseEvent(e) {
+    return { id: e.id, cal: e.cal, title: e.title, loc: e.loc, allDay: e.allDay,
+      start: e.allDay ? parseDay(e.start) : new Date(e.start), end: e.allDay ? parseDay(e.end) : new Date(e.end) };
   }
-  var groceries = [
-    g('Bananas', 'Produce', 1, 'grocer', false, 'Bunch, not too ripe'),
-    g('Baby spinach', 'Produce', 1, 'grocer'),
-    g('Avocados', 'Produce', 3, 'grocer'),
-    g('Honeycrisp apples', 'Produce', 6, 'grocer'),
-    g('Sourdough loaf', 'Bakery', 1, 'grocer'),
-    g('Bagels', 'Bakery', 2, 'costco', false, 'Everything'),
-    g('Chicken thighs', 'Meat & Fish', 1, 'grocer', false, 'Boneless'),
-    g('Salmon fillets', 'Meat & Fish', 2, 'grocer'),
-    g('Milk 2%', 'Dairy & Eggs', 2, 'costco'),
-    g('Eggs', 'Dairy & Eggs', 1, 'costco', false, '2 dozen'),
-    g('Greek yogurt', 'Dairy & Eggs', 1, 'grocer'),
-    g('Aged cheddar', 'Dairy & Eggs', 1, 'grocer'),
-    g('Rigatoni', 'Pantry', 2, 'grocer'),
-    g('Olive oil', 'Pantry', 1, 'costco'),
-    g('Coffee beans', 'Pantry', 1, 'grocer', false, 'Dark roast'),
-    g('Frozen peas', 'Frozen', 1, 'grocer'),
-    g('Waffles', 'Frozen', 1, 'grocer'),
-    g('Goldfish crackers', 'Snacks', 1, 'costco'),
-    g('Granola bars', 'Snacks', 1, 'grocer'),
-    g('Paper towels', 'Household', 1, 'costco'),
-    g('Dish soap', 'Household', 1, 'grocer'),
-    g('Lemons', 'Produce', 2, 'grocer', true),
-    g('Butter', 'Dairy & Eggs', 1, 'grocer', true),
-    g('Tortillas', 'Bakery', 1, 'grocer', true)
-  ];
-  var catalog = [
-    ['Apples', 'Produce'], ['Avocados', 'Produce'], ['Bananas', 'Produce'], ['Baby spinach', 'Produce'], ['Blueberries', 'Produce'],
-    ['Broccoli', 'Produce'], ['Carrots', 'Produce'], ['Cucumber', 'Produce'], ['Garlic', 'Produce'], ['Grapes', 'Produce'],
-    ['Lemons', 'Produce'], ['Limes', 'Produce'], ['Onions', 'Produce'], ['Potatoes', 'Produce'], ['Strawberries', 'Produce'],
-    ['Tomatoes', 'Produce'], ['Bread', 'Bakery'], ['Bagels', 'Bakery'], ['Croissants', 'Bakery'], ['Sourdough loaf', 'Bakery'],
-    ['Tortillas', 'Bakery'], ['Hamburger buns', 'Bakery'], ['Bacon', 'Meat & Fish'], ['Chicken breasts', 'Meat & Fish'],
-    ['Chicken thighs', 'Meat & Fish'], ['Ground beef', 'Meat & Fish'], ['Salmon fillets', 'Meat & Fish'], ['Shrimp', 'Meat & Fish'],
-    ['Butter', 'Dairy & Eggs'], ['Cheddar', 'Dairy & Eggs'], ['Cream cheese', 'Dairy & Eggs'], ['Eggs', 'Dairy & Eggs'],
-    ['Greek yogurt', 'Dairy & Eggs'], ['Milk 2%', 'Dairy & Eggs'], ['Oat milk', 'Dairy & Eggs'], ['Parmesan', 'Dairy & Eggs'],
-    ['Black beans', 'Pantry'], ['Cereal', 'Pantry'], ['Coffee beans', 'Pantry'], ['Flour', 'Pantry'], ['Honey', 'Pantry'],
-    ['Maple syrup', 'Pantry'], ['Olive oil', 'Pantry'], ['Pasta sauce', 'Pantry'], ['Peanut butter', 'Pantry'], ['Rice', 'Pantry'],
-    ['Rigatoni', 'Pantry'], ['Spaghetti', 'Pantry'], ['Sugar', 'Pantry'], ['Tea', 'Pantry'], ['Frozen peas', 'Frozen'],
-    ['Frozen berries', 'Frozen'], ['Ice cream', 'Frozen'], ['Pizza', 'Frozen'], ['Waffles', 'Frozen'], ['Chips', 'Snacks'],
-    ['Crackers', 'Snacks'], ['Dark chocolate', 'Snacks'], ['Goldfish crackers', 'Snacks'], ['Granola bars', 'Snacks'],
-    ['Popcorn', 'Snacks'], ['Dish soap', 'Household'], ['Dishwasher pods', 'Household'], ['Garbage bags', 'Household'],
-    ['Laundry detergent', 'Household'], ['Paper towels', 'Household'], ['Toilet paper', 'Household'], ['Toothpaste', 'Household']
-  ];
-  var usuals = ['Milk 2%', 'Eggs', 'Bananas', 'Bread', 'Apples', 'Coffee beans', 'Greek yogurt', 'Cheddar', 'Butter', 'Baby spinach', 'Chicken thighs', 'Paper towels'];
 
-  // ---------------------------------------------------------------- home control
-  var rooms = [
-    { id: 'kitchen', name: 'Kitchen' },
-    { id: 'living', name: 'Living Room' },
-    { id: 'entry', name: 'Entry + Garage' },
-    { id: 'upstairs', name: 'Upstairs' },
-    { id: 'yard', name: 'Backyard' }
-  ];
-  var devices = [
-    { id: 'k-pend', room: 'kitchen', type: 'light', name: 'Pendants', on: true, level: 80 },
-    { id: 'k-under', room: 'kitchen', type: 'light', name: 'Under Cabinet', on: true, level: 55 },
-    { id: 'k-island', room: 'kitchen', type: 'light', name: 'Island', on: false, level: 100 },
-    { id: 'k-speaker', room: 'kitchen', type: 'blind', name: 'Window Shade', pos: 100 },
-    { id: 'l-lamp', room: 'living', type: 'light', name: 'Floor Lamp', on: true, level: 45 },
-    { id: 'l-ceil', room: 'living', type: 'light', name: 'Ceiling', on: false, level: 100 },
-    { id: 'l-blinds', room: 'living', type: 'blind', name: 'Blinds', pos: 60 },
-    { id: 'l-fire', room: 'living', type: 'light', name: 'Mantel', on: false, level: 70 },
-    { id: 'e-door', room: 'entry', type: 'lock', name: 'Front Door', locked: true },
-    { id: 'e-porch', room: 'entry', type: 'light', name: 'Porch', on: true, level: 100 },
-    { id: 'g-door', room: 'entry', type: 'garage', name: 'Garage', state: 'closed' },
-    { id: 'g-side', room: 'entry', type: 'lock', name: 'Side Door', locked: true },
-    { id: 'u-maya', room: 'upstairs', type: 'light', name: "Buzzsaw's Lamp", on: true, level: 30 },
-    { id: 'u-otto', room: 'upstairs', type: 'light', name: "Skidmark's Nightlight", on: false, level: 15 },
-    { id: 'u-hall', room: 'upstairs', type: 'light', name: 'Hallway', on: false, level: 60 },
-    { id: 'u-bath', room: 'upstairs', type: 'light', name: 'Bathroom', on: false, level: 100 },
-    { id: 'y-string', room: 'yard', type: 'light', name: 'String Lights', on: false, level: 100, flaky: true },
-    { id: 'y-back', room: 'yard', type: 'lock', name: 'Back Door', locked: true },
-    { id: 'y-flood', room: 'yard', type: 'light', name: 'Floodlight', on: false, level: 100 }
-  ];
-  var climate = { current: 20.5, set: 21.5, mode: 'heat', humidity: 42, outside: 14 };
-  var media = { room: 'Kitchen', title: 'Harvest Moon', artist: 'Neil Young', playing: true, volume: 35, seed: 'harvest-vinyl' };
-  var cameras = [
-    { id: 'c-front', name: 'Front Porch', seed: 'porch-steps' },
-    { id: 'c-drive', name: 'Driveway', seed: 'driveway-maple' },
-    { id: 'c-yard', name: 'Backyard', seed: 'garden-yard' }
-  ];
-  var scenes = [
-    { id: 'morning', name: 'Morning', icon: 'sunrise', set: { 'k-pend': 100, 'k-under': 80, 'l-blinds': 100, 'l-lamp': 0, 'u-hall': 60 } },
-    { id: 'dinner', name: 'Dinner', icon: 'utensils', set: { 'k-pend': 55, 'k-under': 30, 'k-island': 70, 'l-lamp': 40, 'l-ceil': 0 } },
-    { id: 'movie', name: 'Movie', icon: 'film', set: { 'k-pend': 0, 'k-under': 15, 'k-island': 0, 'l-lamp': 15, 'l-ceil': 0, 'l-blinds': 0, 'l-fire': 30 } },
-    { id: 'away', name: 'Away', icon: 'away', set: { 'k-pend': 0, 'k-under': 0, 'k-island': 0, 'l-lamp': 0, 'l-ceil': 0, 'l-fire': 0, 'u-maya': 0, 'u-hall': 0, 'e-porch': 100 } },
-    { id: 'night', name: 'Goodnight', icon: 'moon', set: { 'k-pend': 0, 'k-under': 10, 'k-island': 0, 'l-lamp': 0, 'l-ceil': 0, 'l-fire': 0, 'u-hall': 10, 'u-otto': 15, 'e-porch': 0 } }
-  ];
+  // Network down or Access expired: "Offline since …" / "Sign in needed". The Worker answering with
+  // an error (a service down, a revoked token) is not offline: that section is marked instead.
+  function failed(err, name) {
+    if (err && err.status) { S.net.trouble[name || 'data'] = true; App.emit('net'); return; }
+    if (err && err.auth) S.net.auth = true;
+    if (!S.net.since) S.net.since = App.now();
+    App.emit('net');
+  }
+  function ok(name) {
+    var t = name && S.net.trouble[name];
+    if (t) delete S.net.trouble[name];
+    if (t || S.net.since || S.net.auth) { S.net.since = null; S.net.auth = false; App.emit('net'); }
+  }
 
-  // ---------------------------------------------------------------- weather (index = hour of day)
-  var weather = {
-    hi: 17, lo: 8, feels: -2, humidity: 71, wind: 18,
-    t: [9, 9, 8, 8, 8, 8, 9, 10, 11, 12, 13, 15, 16, 17, 16, 15, 14, 13, 12, 12, 11, 10, 10, 9],
-    c: ['moon', 'moon', 'moon', 'moon', 'moon', 'moon', 'partly', 'partly', 'sun', 'sun', 'sun', 'partly', 'partly', 'cloud', 'cloud', 'cloud', 'rain', 'rain', 'rain', 'rain', 'cloud', 'cloud', 'moon', 'moon'],
-    p: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 10, 20, 25, 40, 80, 90, 70, 55, 20, 10, 0, 0]
+  // redirect: 'manual' so an expired Access session (302 to the sign-in page) shows as
+  // "Sign in needed" instead of a CORS failure that looks like being offline.
+  function request(method, path, body) {
+    var opts = { method: method, redirect: 'manual', credentials: 'same-origin', headers: {} };
+    if (body) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    return fetch(path, opts).then(function (r) {
+      if (r.type === 'opaqueredirect' || r.status === 401 || r.status === 403) throw { auth: true };
+      if (!r.ok) throw { status: r.status };
+      return r.json();
+    });
+  }
+
+  // ------------------------------------------------------------ calendar range
+  // Base range: from the Monday on/before the 1st of this month to six weeks ahead. Calendar
+  // views showing another range ask for it with App.api.range(); one extra range is kept.
+  var extra = null, rangeTicket = 0;
+  function baseRange() {
+    var now = App.now(), first = new Date(now.getFullYear(), now.getMonth(), 1);
+    var from = App.addDays(first, -((first.getDay() + 6) % 7));
+    var to = App.addDays(App.dayStart(now), 43);
+    return [App.ymd(from), App.ymd(to)];
+  }
+  function loadRange(r) {
+    return request('GET', '/api/calendar?from=' + r[0] + '&to=' + r[1]).then(function (j) {
+      return { range: r, calendars: j.calendars, events: j.events.map(parseEvent) };
+    });
+  }
+  function mergeEvents(parts) {
+    var seen = {}, out = [];
+    parts.forEach(function (p) {
+      if (!p) return;
+      p.events.forEach(function (e) { if (!seen[e.id]) { seen[e.id] = 1; out.push(e); } });
+    });
+    return out;
+  }
+  var base = null;
+
+  var loaders = {
+    config: function () { return request('GET', '/api/config').then(function (j) { S.config = j; }); },
+    calendar: function () {
+      var jobs = [loadRange(baseRange())];
+      if (extra) jobs.push(loadRange(extra.range));
+      return Promise.all(jobs).then(function (res) {
+        base = res[0];
+        if (res[1]) extra = res[1];
+        S.calendars = base.calendars;
+        S.events = mergeEvents([base, extra]);
+      });
+    },
+    chores: function () {
+      return request('GET', '/api/chores').then(function (j) {
+        j.chores.forEach(function (c) { if (c.id in pending.chores) c.done = pending.chores[c.id]; });
+        S.chores = j;
+      });
+    },
+    shopping: function () {
+      return request('GET', '/api/shopping').then(function (j) {
+        var P = pending.shopping;
+        var moved = j.items.filter(function (i) { return P[i.id] === true; })
+          .concat(j.got.filter(function (i) { return P[i.id] === false; }));
+        j.items = j.items.filter(function (i) { return P[i.id] !== true; });
+        j.got = j.got.filter(function (i) { return P[i.id] !== false; });
+        moved.forEach(function (i) { if (P[i.id]) j.got.unshift(i); else j.items.push(i); });
+        S.shopping = j;
+      });
+    },
+    weather: function () { return request('GET', '/api/weather').then(function (j) { S.weather = j; }); }
   };
 
-  // ---------------------------------------------------------------- photos
-  var t = new Date(base);
-  var mmdd = ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2);
-  var photos = [
-    { seed: 'tofino-surf', o: 'l', date: '2021-' + mmdd, place: 'Tofino, BC', from: 'jordan', tag: 'tofino' },
-    { seed: 'cottage-dock', o: 'l', date: '2023-08-12', place: 'Lake of Bays', from: 'alex', tag: 'cottage' },
-    { seed: 'maya-kite', o: 'p', date: '2024-05-19', place: 'Humber Bay Park', from: 'jordan', tag: 'spring24' },
-    { seed: 'otto-kite', o: 'p', date: '2024-05-19', place: 'Humber Bay Park', from: 'alex', tag: 'spring24' },
-    { seed: 'autumn-walk', o: 'l', date: '2022-10-09', place: 'High Park', from: 'alex', tag: 'fall22' },
-    { seed: 'birthday-cake', o: 'p', date: '2025-10-12', place: 'Home', from: 'jordan', tag: 'bday25' },
-    { seed: 'candles-lit', o: 'p', date: '2025-10-12', place: 'Home', from: 'alex', tag: 'bday25' },
-    { seed: 'mountain-lake', o: 'l', date: '2019-' + mmdd, place: 'Banff, AB', from: 'alex', tag: 'banff' },
-    { seed: 'snow-day', o: 'l', date: '2024-01-21', place: 'Riverdale Hill', from: 'jordan', tag: 'winter24' },
-    { seed: 'beach-dunes', o: 'l', date: '2023-07-02', place: 'Sandbanks', from: 'maya', tag: 'sandbanks' },
-    { seed: 'city-night', o: 'l', date: '2022-12-18', place: 'Nathan Phillips Sq.', from: 'jordan', tag: 'xmas22' },
-    { seed: 'garden-bloom', o: 'p', date: '2025-06-08', place: 'Backyard', from: 'otto', tag: 'garden' },
-    { seed: 'tomato-haul', o: 'p', date: '2025-06-08', place: 'Backyard', from: 'maya', tag: 'garden' },
-    { seed: 'road-trip', o: 'l', date: '2024-08-04', place: 'Cabot Trail, NS', from: 'alex', tag: 'ns' },
-    { seed: 'campfire', o: 'l', date: '2024-08-06', place: 'Cape Breton', from: 'jordan', tag: 'ns' },
-    { seed: 'forest-path', o: 'l', date: '2020-09-26', place: 'Algonquin', from: 'alex', tag: 'algonquin' },
-    { seed: 'pancakes', o: 'p', date: '2026-03-14', place: 'Home', from: 'maya', tag: 'pancakes' },
-    { seed: 'sugar-shack', o: 'p', date: '2026-03-14', place: 'Sugar Shack', from: 'jordan', tag: 'pancakes' },
-    { seed: 'harbour-sail', o: 'l', date: '2025-07-19', place: 'Toronto Harbour', from: 'otto', tag: 'sail' },
-    { seed: 'pumpkins', o: 'l', date: '2025-10-25', place: "Chudleigh's", from: 'maya', tag: 'fall25' }
-  ];
+  function load(name) {
+    if (busy[name]) return busy[name];
+    var p = busy[name] = loaders[name]().then(function () {
+      last[name] = Date.now();
+      ok(name);
+      App.emit('data', name);
+    }, function (err) {
+      last[name] = Date.now() - (EVERY[name] || 0) + 15e3; // retry in ~15 s while it fails
+      failed(err, name);
+    }).then(function () { busy[name] = null; });
+    return p;
+  }
 
-  // ---------------------------------------------------------------- AI agent usage (CodexBar-style)
-  // left = minutes until the window resets; win = window length in minutes (for pace)
-  var H5 = 300, DAY = 1440, WEEK = 10080, MONTH = 43200;
-  var agents = [
-    {
-      id: 'claude', name: 'Claude', plan: 'Max 20×', color: '#D97757', rgb: '217 119 87', status: 'ok',
-      meters: [
-        { label: 'Session', win: H5, used: 62, left: 134 },
-        { label: 'Weekly · all models', win: WEEK, used: 41, left: 4680 }
-      ],
-      tokens: 3.1, cost: 21.4, week: [2.2, 3.8, 2.9, 4.4, 1.6, 0.8, 3.1]
+  // ------------------------------------------------------------ writes
+  function write(kind, id, done, path) {
+    pending[kind][id] = done;
+    App.emit('data', kind);
+    return request('POST', path, { done: done }).then(function () {
+      delete pending[kind][id];
+      return load(kind);
+    }, function (err) {
+      delete pending[kind][id];
+      if (err && !err.status) failed(err, kind);
+      load(kind);
+      App.toast('Couldn’t save that — ' + (S.net.since ? 'the panel is offline' : 'try again in a moment'), { tone: 'error', icon: 'x' });
+      throw err;
+    });
+  }
+
+  App.api = {
+    load: load,
+    pending: pending,
+    setChore: function (c, done) {
+      c.done = done;
+      return write('chores', c.id, done, '/api/chores/' + encodeURIComponent(c.id)).then(null, function (err) { c.done = !done; throw err; });
     },
-    {
-      id: 'codex', name: 'Codex', plan: 'ChatGPT Pro', color: '#10A37F', rgb: '16 163 127', status: 'ok',
-      meters: [
-        { label: 'Session', win: H5, used: 88, left: 38 },
-        { label: 'Weekly', win: WEEK, used: 57, left: 7320 }
-      ],
-      tokens: 4.6, cost: 17.9, week: [3.1, 2.4, 5.2, 4.0, 2.2, 1.1, 4.6]
+    setItem: function (item, done) {
+      var sh = S.shopping;
+      if (done) { sh.items = sh.items.filter(function (i) { return i.id !== item.id; }); sh.got.unshift({ id: item.id, name: item.name, store: item.store, at: new Date().toISOString() }); }
+      else { sh.got = sh.got.filter(function (i) { return i.id !== item.id; }); sh.items.push({ id: item.id, name: item.name, note: '', store: item.store }); }
+      return write('shopping', item.id, done, '/api/shopping/' + encodeURIComponent(item.id)).then(null, function (err) {
+        // Put it back where it was (the refetch in write() can't, while offline)
+        var cur = App.data.shopping;
+        if (done) { cur.got = cur.got.filter(function (i) { return i.id !== item.id; }); cur.items.push(item); }
+        else { cur.items = cur.items.filter(function (i) { return i.id !== item.id; }); cur.got.unshift(item); }
+        App.emit('data', 'shopping');
+        throw err;
+      });
     },
-    {
-      id: 'cursor', name: 'Cursor', plan: 'Pro+', color: '#111111', rgb: '17 17 17', status: 'ok',
-      meters: [
-        { label: 'Included usage', win: MONTH, used: 76, left: 17280, detail: '$45.60 of $60' },
-        { label: 'On-demand', win: MONTH, used: 16, left: 17280, detail: '$8.20 of $50 cap' }
-      ],
-      tokens: 1.8, cost: 6.3, week: [1.2, 1.9, 0.7, 2.3, 1.5, 0.4, 1.8]
+    addItem: function (name, store) {
+      return request('POST', '/api/shopping', { name: name, store: store || null }).then(function (j) {
+        S.shopping.items.push(j.item);
+        App.emit('data', 'shopping');
+        load('shopping');
+        return j.item;
+      }, function (err) {
+        if (err && !err.status) failed(err, 'shopping');
+        App.toast('Couldn’t add that — ' + (S.net.since ? 'the panel is offline' : 'try again in a moment'), { tone: 'error', icon: 'x' });
+        throw err;
+      });
     },
-    {
-      id: 'gemini', name: 'Gemini', plan: 'AI Ultra', color: '#3F6FE4', rgb: '63 111 228', status: 'ok',
-      meters: [
-        { label: 'Requests · daily', win: DAY, used: 16, left: 522, detail: '320 of 2,000' },
-        { label: 'Pro model · daily', win: DAY, used: 52, left: 522, detail: '104 of 200' }
-      ],
-      tokens: 0.9, cost: 0, week: [0.4, 1.1, 0.6, 0.2, 0.9, 1.3, 0.9]
-    },
-    {
-      id: 'copilot', name: 'Copilot', plan: 'Pro+', color: '#8957E5', rgb: '137 87 229', status: 'degraded', incident: 'Elevated errors on coding agent',
-      meters: [
-        { label: 'Premium requests', win: MONTH, used: 75, left: 17280, detail: '1,124 of 1,500' },
-        { label: 'Coding agent', win: MONTH, used: 38, left: 17280, detail: '19 of 50 sessions' }
-      ],
-      tokens: 1.2, cost: 0, week: [0.9, 1.4, 1.1, 0.8, 1.6, 0.3, 1.2]
+    // Make sure events for [from, to) are loaded (Calendar paging outside the base range).
+    range: function (from, to) {
+      var b = base && base.range, f = App.ymd(from), t = App.ymd(to);
+      if (b && f >= b[0] && t <= b[1]) return;
+      if (extra && f >= extra.range[0] && t <= extra.range[1]) return;
+      var ticket = ++rangeTicket;
+      loadRange([f, t]).then(function (r) {
+        if (ticket !== rangeTicket) return; // a later page asked for another range
+        extra = r;
+        S.events = mergeEvents([base, extra]);
+        ok('calendar');
+        App.emit('data', 'calendar');
+      }, function (err) { failed(err, 'calendar'); });
     }
-  ];
-
-  return {
-    people: people, family: family, ALL: ALL,
-    events: events, busyExtras: busyExtras,
-    routines: routines, chores: chores, stars: stars, week: week,
-    stores: stores, catOrder: catOrder, groceries: groceries, catalog: catalog, usuals: usuals,
-    rooms: rooms, devices: devices, climate: climate, media: media, cameras: cameras, scenes: scenes,
-    weather: weather, photos: photos, agents: agents,
-    _gid: function () { return 'g' + (++gid); },
-    _eid: function () { return 'e' + (++n); }
   };
+
+  // ------------------------------------------------------------ schedule
+  // At night (black screen) refresh less often; waking refreshes anything older than its interval.
+  function due(name) { return !last[name] || Date.now() - last[name] >= EVERY[name] * (App.mode === 'night' ? 10 : 1); }
+  function sweep() { Object.keys(EVERY).forEach(function (n) { if (due(n)) load(n); }); }
+  App.on('ready', function () {
+    load('config').then(function () { sweep(); });
+    setInterval(function () { if (!S.config) load('config'); else sweep(); }, 5000);
+  });
+  App.on('mode', function (m) { if (m === 'day') sweep(); });
+  // A new day: the base calendar range and today's chores move.
+  App.on('minute', function (n) { if (n.getHours() === 0 && n.getMinutes() === 0) { last = {}; sweep(); } });
 })();
