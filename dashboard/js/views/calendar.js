@@ -45,7 +45,7 @@
     opts = opts || {};
     var now = App.now();
     var mins = (e.end - e.start) / 60000;
-    var cls = 'ev' + (e.end <= now ? ' is-past' : '') + (e.start <= now && e.end > now ? ' is-now' : '') + (mins < 45 ? ' is-short' : '') + (App.isFamily(e) ? ' is-family' : '') + (opts.half ? ' is-half' : '');
+    var cls = 'ev' + (e.end <= now ? ' is-past' : '') + (e.start <= now && e.end > now ? ' is-now' : '') + (mins < 45 ? ' is-short' : '') + (opts.half ? ' is-half' : '');
     return '<button class="' + cls + '" data-ev="' + App.esc(e.id) + '" style="' + App.pstyle(App.evColor(e)) + ';' + style + '">' +
       '<span class="ev-title">' + App.esc(e.title) + '</span>' +
       '<span class="ev-meta">' + App.fmt.range(e.start, e.end) + '</span>' +

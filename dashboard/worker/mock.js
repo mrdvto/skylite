@@ -9,7 +9,9 @@ const CALS = [
   { id: 'claudia@example.com', summary: 'Claudia', backgroundColor: '#E4007C', foregroundColor: '#FFFFFF', selected: true },
   { id: 'buzzsaw@example.com', summary: 'Buzzsaw', backgroundColor: '#00A36C', foregroundColor: '#FFFFFF', selected: true },
   { id: 'skidmark@example.com', summary: 'Skidmark', backgroundColor: '#FFB000', foregroundColor: '#111111', selected: true },
-  { id: 'family@example.com', summary: 'Family', backgroundColor: '#111111', foregroundColor: '#FFFFFF', selected: true },
+  // Like the real account: shared calendars keep the owner's name unless renamed in the frame
+  // account (summaryOverride), and Google's palette colours come with black ink.
+  { id: 'family@example.com', summary: 'Our crew', summaryOverride: 'Family', backgroundColor: '#C2C2C2', foregroundColor: '#000000', selected: true },
   { id: 'frame@example.com', summary: 'frame@example.com', backgroundColor: '#999999', foregroundColor: '#000000', selected: false, primary: true },
 ];
 const W = 'wes@example.com', C = 'claudia@example.com', B = 'buzzsaw@example.com', K = 'skidmark@example.com', F = 'family@example.com';

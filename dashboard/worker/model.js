@@ -36,12 +36,14 @@ export async function calendar(src, S, from, to) {
   const events = [];
   lists.forEach((items, i) => {
     for (const e of items) {
-      if (e.status === 'cancelled' || !e.start || !e.end) continue;
+      // Working-location entries ("Home", "Office") are a Workspace status, not an event.
+      if (e.status === 'cancelled' || e.eventType === 'workingLocation' || !e.start || !e.end) continue;
       const allDay = !!e.start.date;
       events.push({
         id: calendars[i].key + ':' + e.id,
         cal: calendars[i].key,
-        title: String(e.summary || '(No title)').slice(0, 200),
+        // Private events reach a reader calendar without a title
+        title: String(e.summary || 'Busy').slice(0, 200),
         loc: e.location ? String(e.location).slice(0, 200) : '',
         allDay,
         start: allDay ? e.start.date : e.start.dateTime,

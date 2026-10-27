@@ -64,7 +64,7 @@ export function googleCalendar(env) {
     events: (calId, timeMin, timeMax, tz) => gall(env, '/calendars/' + encodeURIComponent(calId) + '/events', {
       timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString(), timeZone: tz,
       singleEvents: 'true', orderBy: 'startTime', maxResults: '2500',
-      fields: 'items(id,status,summary,location,start,end),nextPageToken',
+      fields: 'items(id,status,eventType,summary,location,start,end),nextPageToken',
     }),
   };
 }
