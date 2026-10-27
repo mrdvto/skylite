@@ -8,9 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "settings": "node worker/settings.mjs",
-    "worker": "vite build && node worker/settings.mjs && wrangler dev --var MOCK:1 --port 8787",
-    "worker:todoist": "vite build && node worker/settings.mjs && wrangler dev --var MOCK:calendar --port 8788",
-    "worker:live": "vite build && node worker/settings.mjs && wrangler dev --var LOCAL:1 --port 8789 --persist-to .wrangler/state-live",
+    "worker": "vite build && node worker/settings.mjs && wrangler dev --var MOCK:1 --var ACCESS_AUD: --port 8787",
+    "worker:todoist": "vite build && node worker/settings.mjs && wrangler dev --var MOCK:calendar --var ACCESS_AUD: --port 8788",
+    "worker:live": "vite build && node worker/settings.mjs && wrangler dev --var LOCAL:1 --var ACCESS_AUD: --port 8789 --persist-to .wrangler/state-live",
     "deploy": "vite build && node worker/settings.mjs && wrangler deploy"
   },
   "devDependencies": {

@@ -46,6 +46,8 @@ const CHORES = [
   ['Evening', 'Buzzsaw', '🍴 Set the table', 1, 0], ['Evening', 'Buzzsaw', '🚿 Shower', 1, 0], ['Evening', 'Skidmark', '🛁 Bath', 1, 0],
   ['Evening', 'Wes', '🔐 Lock up', 1, 0], ['Evening', 'Claudia', '🫧 Run dishwasher', 1, 0], ['Evening', '', '🗑️ Garbage to curb', 0, 0],
 ];
+// Chores sections, as in the frame account: they only order the list, nothing groups by them.
+const CHORE_SECTIONS = ['Morning', 'After school', 'Evening'];
 // Shopping sections, as in the frame account; stores without one are labels.
 const SHOP_SECTIONS = ['No Frills', 'T&T', 'Costco', 'Other'];
 // [name, section or '', store label or '', done (got it)]
@@ -147,7 +149,7 @@ export function mockSource(S) {
     },
     todoist: {
       projects: async () => [{ id: 'p-chores', name: S.todoist.choresProject }, { id: 'p-shop', name: S.todoist.shoppingProject }],
-      sections: async (pid) => (pid === 'p-chores' ? S.routines.map((r) => r.section || r.name) : SHOP_SECTIONS).map((n) => ({ id: 's-' + n, name: n })),
+      sections: async (pid) => (pid === 'p-chores' ? CHORE_SECTIONS : SHOP_SECTIONS).map((n, i) => ({ id: 's-' + n, name: n, section_order: i + 1 })),
       tasks: async (pid) => st().tasks.filter((t) => t.project_id === pid && !t.checked),
       completed: async (pid, since, until) => st().completions.filter((c) => c.project_id === pid && Date.parse(c.completed_at) >= +since && Date.parse(c.completed_at) <= +until).map((c) => ({ ...c })),
       completions: async (pid, since) => st().log.filter((a) => a.parent_project_id === pid && Date.parse(a.event_date) >= +since).reverse(),

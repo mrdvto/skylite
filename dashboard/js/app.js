@@ -140,18 +140,6 @@
   };
 
   // ------------------------------------------------------------ chores + weather helpers
-  App.routines = function () { return (App.data.config && App.data.config.routines) || []; };
-  App.currentRoutine = function () {
-    var r = App.routines(), m = App.minsOfDay(App.now());
-    for (var i = 0; i < r.length; i++) if (m >= mins(r[i].from) && m < mins(r[i].to)) return r[i];
-    // Outside every routine: the next one (early morning) or the last one (late evening)
-    return m < mins(r[0] ? r[0].from : '0') ? r[0] : r[r.length - 1];
-  };
-  App.routineRange = function (r) {
-    function h(hm) { var p = hm.split(':'), x = +p[0]; return (x % 12 || 12) + (+p[1] ? ':' + p[1] : ''); }
-    function ap(hm) { return +hm.split(':')[0] >= 12 ? 'PM' : 'AM'; }
-    return ap(r.from) === ap(r.to) ? h(r.from) + ' – ' + h(r.to) + ' ' + ap(r.to) : h(r.from) + ' ' + ap(r.from) + ' – ' + h(r.to) + ' ' + ap(r.to);
-  };
   // Chore owner: the first label matching a calendar name, else Anyone.
   App.choreWho = function (c) {
     var p = App.people(), labels = (c.labels || []).map(App.norm);
@@ -159,10 +147,8 @@
     return 'any';
   };
   App.choreCols = function () { return App.columns().map(function (c) { return c.key; }).concat(['any']); };
-  App.choresIn = function (r) {
-    var cur = App.currentRoutine();
-    return ((App.data.chores && App.data.chores.chores) || []).filter(function (c) { return (c.routine || cur.id) === r.id; });
-  };
+  // Due today + overdue, and those ticked today (they stay until midnight), in one list.
+  App.chores = function () { return (App.data.chores && App.data.chores.chores) || []; };
   App.weatherNow = function () {
     var W = App.data.weather;
     if (!W) return null;

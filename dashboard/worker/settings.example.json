@@ -4,11 +4,6 @@
   "familyCalendar": "Family",
   "columns": [],
   "todoist": { "choresProject": "Chores", "shoppingProject": "Shopping" },
-  "routines": [
-    { "id": "morning", "name": "Morning", "section": "Morning", "from": "06:00", "to": "11:00" },
-    { "id": "after", "name": "After school", "section": "After school", "from": "11:00", "to": "17:00" },
-    { "id": "evening", "name": "Evening", "section": "Evening", "from": "17:00", "to": "22:00" }
-  ],
   "stores": [
     { "name": "No Frills", "tab": true, "color": "#FFD701", "ink": "#191919" },
     { "name": "T&T", "tab": true, "color": "#007852", "ink": "#FFFFFF" },
