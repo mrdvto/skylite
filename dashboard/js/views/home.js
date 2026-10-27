@@ -93,9 +93,8 @@
   App.ring = ring;
 
   function chores() {
-    var r = App.currentRoutine();
-    if (!r || !App.data.chores) return '<div class="label">Chores</div><div class="h-free serif"><i>Loading…</i></div>';
-    var all = App.choresIn(r);
+    if (!App.data.chores) return '<div class="label">Chores</div><div class="h-free serif"><i>Loading…</i></div>';
+    var all = App.chores();
     var rings = App.choreCols().map(function (key) {
       var list = all.filter(function (c) { return App.choreWho(c) === key; });
       if (!list.length) return '';
@@ -103,7 +102,7 @@
       return '<div class="h-ring' + (done === list.length ? ' is-done' : '') + '" style="' + App.pstyle(p) + '">' + ring(done, list.length, 64) +
         '<b class="num">' + (done === list.length ? '✓' : done + '/' + list.length) + '</b><span>' + App.esc(p.name) + '</span></div>';
     }).join('');
-    return '<div class="label">Chores · ' + App.esc(r.name) + '</div><div class="h-rings">' + (rings || '<div class="h-free serif"><i>Nothing due</i></div>') + '</div>';
+    return '<div class="label">Chores · Today</div><div class="h-rings">' + (rings || '<div class="h-free serif"><i>Nothing due</i></div>') + '</div>';
   }
 
   function shopping() {

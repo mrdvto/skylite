@@ -100,20 +100,20 @@ export async function chores(src, S) {
     // Without the log, recurring chores done today drop out; the rest still shows.
     src.todoist.completions(pid, start).catch((e) => { console.log('activity log', e && e.message); return []; }),
   ]);
-  const routineOf = {};
-  for (const s of sections) {
-    const r = S.routines.find((x) => norm(x.section || x.name) === norm(s.name));
-    if (r) routineOf[s.id] = r.id;
-  }
+  // One list. Sections don't group chores; they only keep the order the Todoist app shows
+  // (no section first, then each section in turn, by position inside it).
+  const rank = {};
+  sections.slice().sort((a, b) => (a.section_order || 0) - (b.section_order || 0)).forEach((s, i) => { rank[s.id] = i + 1; });
   const seen = new Set(), out = [];
   const shape = (t, isDone) => ({
     id: String(t.id),
     title: String(t.content || '').slice(0, 200),
-    routine: routineOf[t.section_id] || null,
     labels: (t.labels || []).slice(0, 10),
     done: isDone,
     overdue: !isDone && dueDay(t) < today,
-    order: t.child_order || 0,
+    order: 0,
+    sec: rank[t.section_id] || 0,
+    pos: t.child_order || 0,
   });
   // A recurring chore done today is active again with a later due date; only the activity log
   // says it was done. If it is still due today (an overdue daily, or unticked again), it is open.
@@ -130,6 +130,8 @@ export async function chores(src, S) {
     seen.add(String(t.id));
     out.push(shape(t, true));
   }
+  // order = place in the Todoist app; the panel sorts by it after done and overdue.
+  out.sort((a, b) => (a.sec - b.sec) || (a.pos - b.pos)).forEach((c, i) => { c.order = i; delete c.sec; delete c.pos; });
   out.sort((a, b) => (b.overdue - a.overdue) || (a.order - b.order));
   return { chores: out };
 }

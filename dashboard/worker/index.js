@@ -52,7 +52,6 @@ function config(env) {
     mock: MOCKS.includes(env.MOCK),
     timezone: S.timezone,
     familyCalendar: S.familyCalendar,
-    routines: S.routines.map(({ id, name, from, to }) => ({ id, name, from, to })),
     stores: S.stores.map(({ name, tab, color, ink }) => ({
       name, tab: !!tab,
       // tag colours go into a style attribute: only plain #RRGGBB passes
