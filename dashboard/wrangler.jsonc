@@ -9,6 +9,9 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
+  // Access guards the workers.dev hostname only; preview URLs (<version>-<name>.….workers.dev)
+  // would skip it. Without this line every deploy turns them back on.
+  "preview_urls": false,
   // Workers Logs store logs on Cloudflare; keep them off (debug with `wrangler tail`).
   "observability": { "enabled": false }
 }
