@@ -101,15 +101,23 @@ export function todoist(env) {
     projects: () => tall(env, '/projects', {}),
     sections: (projectId) => tall(env, '/sections', { project_id: projectId }),
     tasks: (projectId) => tall(env, '/tasks', { project_id: projectId }),
+    // One-off tasks only: Todoist leaves recurring completions out of this list.
     completed: (projectId, since, until) => tall(env, '/tasks/completed/by_completion_date', {
       project_id: projectId, since: since.toISOString(), until: until.toISOString(),
     }, 'items'),
+    // Every completion, recurring ones too (`object_id`, `event_date`,
+    // `extra_data.completed_due_date_local`). Lags a few seconds behind a close.
+    completions: (projectId, since) => tall(env, '/activities', {
+      object_type: 'item', event_type: 'completed', parent_project_id: projectId, date_from: since.toISOString(),
+    }),
+    // Open or completed; an unknown id answers 400 or 404.
     task: (id) => tcall(env, 'GET', '/tasks/' + id),
     close: (id) => tcall(env, 'POST', '/tasks/' + id + '/close'),
     reopen: (id) => tcall(env, 'POST', '/tasks/' + id + '/reopen'),
     create: (fields) => tcall(env, 'POST', '/tasks', { json: fields }),
-    // Undo the completion of a recurring task: move its due date back without logging a completion.
-    // (Close on a recurring task only advances the due date, and reopen does not move it back.)
+    // Undo the completion of a recurring task (Sync `is_forward: 0`): sets the due date back and
+    // takes one off `completed_count`. Close on a recurring task only advances the due date, and
+    // reopen does not move it back. `due` is required: without it Todoist moves the date forward.
     uncompleteRecurring: async (id, due) => {
       const uuid = crypto.randomUUID();
       const j = await tcall(env, 'POST', '/sync', {

@@ -73,14 +73,30 @@ async function projectId(src, name) {
 }
 
 const dueDay = (t) => (t.due && t.due.date ? t.due.date.slice(0, 10) : null);
+// The due a completion (activity log entry) was for, local: "YYYY-MM-DD" + "THH:MM:SS".
+const wasDueAt = (a) => String((a.extra_data || {}).completed_due_date_local || '');
+const wasDue = (a) => wasDueAt(a).slice(0, 10) || null;
+
+// The completion that moved a recurring chore past today: its latest one for a due date up to
+// today (one ticked early doesn't count), unless the task changed after it. An untick or a
+// reschedule sets updated_at; the close itself sets it within milliseconds of the log entry.
+function todaysCompletion(log, t, today) {
+  const last = log
+    .filter((a) => String(a.object_id) === String(t.id) && wasDue(a) && wasDue(a) <= today)
+    .sort((a, b) => String(b.event_date).localeCompare(String(a.event_date)))[0];
+  return last && Date.parse(t.updated_at) - Date.parse(last.event_date) < 5e3 ? last : null;
+}
 const firstLine = (s) => String(s || '').split('\n')[0].slice(0, 120);
 
 // ------------------------------------------------------------------ chores
 export async function chores(src, S) {
   const tz = S.timezone, today = ymd(tz);
   const pid = await projectId(src, S.todoist.choresProject);
-  const [sections, active, done] = await Promise.all([
-    sectionList(src, pid), src.todoist.tasks(pid), src.todoist.completed(pid, zoned(tz, today), new Date()),
+  const start = zoned(tz, today);
+  const [sections, active, done, log] = await Promise.all([
+    sectionList(src, pid), src.todoist.tasks(pid), src.todoist.completed(pid, start, new Date()),
+    // Without the log, recurring chores done today drop out; the rest still shows.
+    src.todoist.completions(pid, start).catch((e) => { console.log('activity log', e && e.message); return []; }),
   ]);
   const routineOf = {};
   for (const s of sections) {
@@ -97,80 +113,99 @@ export async function chores(src, S) {
     overdue: !isDone && dueDay(t) < today,
     order: t.child_order || 0,
   });
+  // A recurring chore done today is active again with a later due date; only the activity log
+  // says it was done. If it is still due today (an overdue daily, or unticked again), it is open.
   for (const t of active) {
     const d = dueDay(t);
-    if (!d || d > today) continue;
+    if (!d) continue;
+    if (d <= today) out.push(shape(t, false));
+    else if (t.due.is_recurring && todaysCompletion(log, t, today)) out.push(shape(t, true));
+    else continue;
     seen.add(String(t.id));
-    out.push(shape(t, false));
   }
-  // A recurring chore done today is active again with a later due date, and also in the
-  // completed list. If it is due again today (an overdue daily), the open copy above wins.
   for (const t of done) {
-    const id = String(t.task_id || t.id);
-    if (seen.has(id)) continue;
-    seen.add(id);
-    out.push(shape({ ...t, id }, true));
+    if (seen.has(String(t.id))) continue;
+    seen.add(String(t.id));
+    out.push(shape(t, true));
   }
   out.sort((a, b) => (b.overdue - a.overdue) || (a.order - b.order));
   return { chores: out };
 }
 
 // ------------------------------------------------------------------ shopping
-function storeOf(S, labels) {
-  for (const l of labels || []) {
-    const s = S.stores.find((x) => norm(x.name) === norm(l) || (x.label && norm(x.label) === norm(l)));
+// A store is a section of the Shopping project or a label on the item; the section wins. Items
+// in an "Other" section, or in none, can still carry a store label (Longo's in Other).
+const isStore = (x, name) => norm(x.name) === norm(name) || (x.label && norm(x.label) === norm(name));
+function storeOf(S, sectionName, labels) {
+  for (const n of [sectionName, ...(labels || [])]) {
+    const s = n && S.stores.find((x) => isStore(x, n));
     if (s) return s.name;
   }
   return 'Other';
+}
+async function sectionNames(src, pid) {
+  const o = {};
+  for (const s of await sectionList(src, pid)) o[s.id] = s.name;
+  return o;
 }
 
 export async function shopping(src, S) {
   const pid = await projectId(src, S.todoist.shoppingProject);
   const now = new Date();
-  const [active, got] = await Promise.all([
-    src.todoist.tasks(pid), src.todoist.completed(pid, new Date(now - 864e5), now),
+  const [secName, active, got] = await Promise.all([
+    sectionNames(src, pid), src.todoist.tasks(pid), src.todoist.completed(pid, new Date(now - 864e5), now),
   ]);
+  const store = (t) => storeOf(S, secName[t.section_id], t.labels);
   const open = new Set(active.map((t) => String(t.id)));
   const listed = new Set(); // a task ticked, put back and ticked again has two completion records
   return {
     items: active
       .slice().sort((a, b) => String(a.added_at).localeCompare(String(b.added_at)) || ((a.child_order || 0) - (b.child_order || 0)))
-      .map((t) => ({ id: String(t.id), name: String(t.content || '').slice(0, 200), note: firstLine(t.description), store: storeOf(S, t.labels) })),
+      .map((t) => ({ id: String(t.id), name: String(t.content || '').slice(0, 200), note: firstLine(t.description), store: store(t) })),
     got: got
-      .map((t) => ({ ...t, id: String(t.task_id || t.id) }))
+      .map((t) => ({ ...t, id: String(t.id) }))
       .filter((t) => !open.has(t.id))
       .sort((a, b) => String(b.completed_at).localeCompare(String(a.completed_at)))
       .filter((t) => !listed.has(t.id) && listed.add(t.id))
-      .map((t) => ({ id: t.id, name: String(t.content || '').slice(0, 200), store: storeOf(S, t.labels), at: t.completed_at })),
+      .map((t) => ({ id: t.id, name: String(t.content || '').slice(0, 200), store: store(t), at: t.completed_at })),
   };
 }
 
 // ------------------------------------------------------------------ writes (one item each)
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-// The task, but only if it is in the given project (open, or completed since `since`).
-async function ownTask(src, id, pid, since) {
+// The task (open or completed), but only if it is in the given project.
+async function ownTask(src, id, pid) {
   if (!ID.test(id)) throw new BadRequest('id');
-  let t = null;
-  try { t = await src.todoist.task(id); } catch (e) { if (!(e instanceof Upstream && e.status === 404)) throw e; }
-  if (!t) {
-    const c = (await src.todoist.completed(pid, since, new Date())).find((x) => String(x.task_id || x.id) === id);
-    if (c) t = { ...c, id, checked: true };
+  let t;
+  try { t = await src.todoist.task(id); } catch (e) {
+    if (e instanceof Upstream && (e.status === 404 || e.status === 400)) throw new NotFound('task');
+    throw e;
   }
-  if (!t || String(t.project_id) !== String(pid)) throw new NotFound('task');
+  if (!t || t.is_deleted || String(t.project_id) !== String(pid)) throw new NotFound('task');
   return t;
 }
 
 export async function setChore(src, S, id, done) {
   const tz = S.timezone, today = ymd(tz);
   const pid = await projectId(src, S.todoist.choresProject);
-  const t = await ownTask(src, id, pid, zoned(tz, today));
+  const t = await ownTask(src, id, pid);
   const recurring = !!(t.due && t.due.is_recurring);
   if (done) {
     if (!t.checked && (!dueDay(t) || dueDay(t) <= today)) await src.todoist.close(id);
   } else if (recurring) {
-    // Only undo when the due date was moved past today by a completion.
-    if (dueDay(t) > today) await src.todoist.uncompleteRecurring(id, { date: today, string: t.due.string });
+    // Only undo when a completion today moved the due date past today: back to the due that
+    // completion was for (overdue stays overdue; a timed chore keeps its local time).
+    if (dueDay(t) <= today) return;
+    const timed = t.due.date.length > 10;
+    const last = todaysCompletion(await src.todoist.completions(pid, zoned(tz, today)), t, today);
+    if (last) {
+      await src.todoist.uncompleteRecurring(id, { date: timed ? wasDueAt(last) : wasDue(last), string: t.due.string });
+    } else if (t.completed_count > 0 && Date.now() - Date.parse(t.updated_at) < 120e3) {
+      // The log lags up to ~20 s behind a close: an untick right after a tick (the close set
+      // updated_at) goes back to today, overdue or not.
+      await src.todoist.uncompleteRecurring(id, { date: today + (timed && !t.due.timezone ? t.due.date.slice(10) : ''), string: t.due.string });
+    }
   } else if (t.checked) {
     await src.todoist.reopen(id);
   }
@@ -178,7 +213,7 @@ export async function setChore(src, S, id, done) {
 
 export async function setItem(src, S, id, done) {
   const pid = await projectId(src, S.todoist.shoppingProject);
-  const t = await ownTask(src, id, pid, new Date(Date.now() - 864e5));
+  const t = await ownTask(src, id, pid);
   if (done && !t.checked) await src.todoist.close(id);
   if (!done && t.checked) await src.todoist.reopen(id);
 }
@@ -190,7 +225,13 @@ export async function addItem(src, S, name, store) {
   const s = store ? S.stores.find((x) => x.name === store) : null;
   if (store && !s) throw new BadRequest('store');
   const pid = await projectId(src, S.todoist.shoppingProject);
-  const t = await src.todoist.create({ content: name, project_id: pid, labels: s ? [s.label || s.name] : [] });
+  // Into the store's section if the project has one (an "Other" section for no store), else
+  // tagged with the store's label.
+  const sec = (await sectionList(src, pid)).find((x) => (s ? isStore(s, x.name) : norm(x.name) === 'other'));
+  const t = await src.todoist.create({
+    content: name, project_id: pid,
+    ...(sec ? { section_id: sec.id } : {}), labels: s && !sec ? [s.label || s.name] : [],
+  });
   return { id: String(t.id), name, note: '', store: s ? s.name : 'Other' };
 }
 

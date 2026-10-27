@@ -10,9 +10,12 @@
   };
   var EVERY = { chores: 30e3, shopping: 30e3, calendar: 120e3, weather: 15 * 60e3 };
   var last = {}, busy = {};
-  // Writes in flight: id -> desired state, laid over fetched data so a refresh that started
-  // before the write landed cannot flip the tick back.
-  var pending = { chores: {}, shopping: {} };
+  // Writes in flight or just made: id -> desired state, laid over fetched data so a refresh that
+  // started before the write landed cannot flip the tick back. Kept SETTLE ms after the write
+  // succeeds: Todoist's activity log, which says a recurring chore was done, lags a few seconds.
+  // Once a write succeeded, fetched data that agrees with it ends the overlay early.
+  var pending = { chores: {}, shopping: {} }, saved = { chores: {}, shopping: {} };
+  var SETTLE = 40e3;
 
   function parseDay(s) { var p = s.split('-'); return new Date(+p[0], p[1] - 1, +p[2]); }
   function parseEvent(e) {
@@ -85,13 +88,20 @@
     },
     chores: function () {
       return request('GET', '/api/chores').then(function (j) {
-        j.chores.forEach(function (c) { if (c.id in pending.chores) c.done = pending.chores[c.id]; });
+        var P = pending.chores, have = {};
+        j.chores.forEach(function (c) { have[c.id] = true; if (overlay('chores', c.id, c.done)) c.done = P[c.id]; });
+        // A recurring chore just ticked can be missing until the log catches up: keep the old copy.
+        ((S.chores && S.chores.chores) || []).forEach(function (c) {
+          if (c.id in P && !have[c.id]) j.chores.push(Object.assign({}, c, { done: P[c.id] }));
+        });
         S.chores = j;
       });
     },
     shopping: function () {
       return request('GET', '/api/shopping').then(function (j) {
         var P = pending.shopping;
+        j.items.forEach(function (i) { overlay('shopping', i.id, false); });
+        j.got.forEach(function (i) { overlay('shopping', i.id, true); });
         var moved = j.items.filter(function (i) { return P[i.id] === true; })
           .concat(j.got.filter(function (i) { return P[i.id] === false; }));
         j.items = j.items.filter(function (i) { return P[i.id] !== true; });
@@ -117,14 +127,24 @@
   }
 
   // ------------------------------------------------------------ writes
+  // Whether a pending write still overrides the fetched state of an item (not once it agrees).
+  function overlay(kind, id, state) {
+    if (!(id in pending[kind])) return false;
+    if (saved[kind][id] && pending[kind][id] === state) { delete pending[kind][id]; delete saved[kind][id]; return false; }
+    return true;
+  }
+
   function write(kind, id, done, path) {
     pending[kind][id] = done;
+    delete saved[kind][id];
     App.emit('data', kind);
     return request('POST', path, { done: done }).then(function () {
-      delete pending[kind][id];
+      saved[kind][id] = true;
+      setTimeout(function () { if (saved[kind][id] && pending[kind][id] === done) { delete pending[kind][id]; delete saved[kind][id]; } }, SETTLE);
       return load(kind);
     }, function (err) {
       delete pending[kind][id];
+      delete saved[kind][id];
       if (err && !err.status) failed(err, kind);
       load(kind);
       App.toast('Couldn’t save that — ' + (S.net.since ? 'the panel is offline' : 'try again in a moment'), { tone: 'error', icon: 'x' });

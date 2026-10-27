@@ -44,18 +44,21 @@ const CHORES = [
   ['Evening', 'Buzzsaw', '🍴 Set the table', 1, 0], ['Evening', 'Buzzsaw', '🚿 Shower', 1, 0], ['Evening', 'Skidmark', '🛁 Bath', 1, 0],
   ['Evening', 'Wes', '🔐 Lock up', 1, 0], ['Evening', 'Claudia', '🫧 Run dishwasher', 1, 0], ['Evening', '', '🗑️ Garbage to curb', 0, 0],
 ];
-// [name, store label or '', done (got it)]
+// Shopping sections, as in the frame account; stores without one are labels.
+const SHOP_SECTIONS = ['No Frills', 'T&T', 'Costco', 'Other'];
+// [name, section or '', store label or '', done (got it)]
 const SHOPPING = [
   ['Bananas', 'No Frills'], ['Baby spinach', 'No Frills'], ['Avocados', 'No Frills'], ['Bok choy', 'T&T'], ['Dumplings', 'T&T'],
-  ['Milk 2%', 'Costco'], ['Eggs', 'Costco'], ['Paper towels', 'Costco'], ['Sourdough loaf', "Longo's"], ['Toothpaste', 'Shoppers'],
-  ['Coffee beans', ''], ['Dish soap', ''], ['Lemons', 'No Frills', 1], ['Butter', 'Costco', 1],
+  ['Milk 2%', 'Costco'], ['Eggs', 'Costco'], ['Paper towels', 'Costco'], ['Sourdough loaf', 'Other', "Longo's"], ['Toothpaste', '', 'Shoppers'],
+  ['Coffee beans', 'Other'], ['Dish soap', ''], ['Lemons', 'No Frills', '', 1], ['Butter', 'Costco', '', 1],
 ];
 
 let state = null;
 
 function build(tz) {
   const today = ymd(tz), now = Date.now();
-  const st = { day: today, n: 0, events: [], tasks: [], completions: [] };
+  // completions: the completed list (one-off tasks only); log: activity log "completed" events.
+  const st = { day: today, n: 0, events: [], tasks: [], completions: [], log: [] };
   const id = () => String(1000 + ++st.n);
   for (const [d, s, e, title, cal, loc] of EVENTS) {
     const day = addDays(today, d);
@@ -83,9 +86,9 @@ function build(tz) {
     st.tasks.push(t);
     if (done) close(st, t, tz, now - 3600e3);
   });
-  SHOPPING.forEach(([name, store, done], i) => {
+  SHOPPING.forEach(([name, sec, label, done], i) => {
     const t = {
-      id: id(), project_id: 'p-shop', section_id: null, content: name, description: '', labels: store ? [store] : [],
+      id: id(), project_id: 'p-shop', section_id: sec ? 's-' + sec : null, content: name, description: '', labels: label ? [label] : [],
       child_order: i, checked: false, added_at: new Date(now - 864e5 * 3 + i * 60e3).toISOString(), due: null,
     };
     st.tasks.push(t);
@@ -94,10 +97,18 @@ function build(tz) {
   return st;
 }
 
+// Like Todoist: a recurring task moves to its next date and shows up only in the activity log; a
+// one-off task is checked and listed as completed (same id) until reopened.
 function close(st, t, tz, at) {
-  st.completions.push({ ...t, task_id: t.id, id: 'x' + t.id + '-' + at, completed_at: new Date(at).toISOString(), checked: true });
-  if (t.due && t.due.is_recurring) t.due = { ...t.due, date: addDays(t.due.date > ymd(tz) ? t.due.date : ymd(tz), 1) };
-  else { t.checked = true; t.completed_at = new Date(at).toISOString(); }
+  const when = new Date(at).toISOString();
+  t.updated_at = when;
+  t.completed_count = (t.completed_count || 0) + 1;
+  st.log.push({ event_type: 'completed', object_type: 'item', object_id: t.id, parent_project_id: t.project_id, event_date: when,
+    extra_data: { content: t.content, completed_due_date_local: (t.due ? t.due.date.slice(0, 10) : ymd(tz)) + 'T23:59:59', is_recurring: !!(t.due && t.due.is_recurring) } });
+  if (t.due && t.due.is_recurring) { t.due = { ...t.due, date: addDays(t.due.date > ymd(tz) ? t.due.date : ymd(tz), 1) }; return; }
+  t.checked = true;
+  t.completed_at = when;
+  st.completions.push({ ...t });
 }
 
 function weatherJson(tz) {
@@ -134,28 +145,33 @@ export function mockSource(S) {
     },
     todoist: {
       projects: async () => [{ id: 'p-chores', name: S.todoist.choresProject }, { id: 'p-shop', name: S.todoist.shoppingProject }],
-      sections: async (pid) => (pid === 'p-chores' ? S.routines.map((r) => ({ id: 's-' + (r.section || r.name), name: r.section || r.name })) : []),
+      sections: async (pid) => (pid === 'p-chores' ? S.routines.map((r) => r.section || r.name) : SHOP_SECTIONS).map((n) => ({ id: 's-' + n, name: n })),
       tasks: async (pid) => st().tasks.filter((t) => t.project_id === pid && !t.checked),
-      completed: async (pid, since, until) => st().completions.filter((c) => c.project_id === pid && Date.parse(c.completed_at) >= +since && Date.parse(c.completed_at) <= +until),
+      completed: async (pid, since, until) => st().completions.filter((c) => c.project_id === pid && Date.parse(c.completed_at) >= +since && Date.parse(c.completed_at) <= +until).map((c) => ({ ...c })),
+      completions: async (pid, since) => st().log.filter((a) => a.parent_project_id === pid && Date.parse(a.event_date) >= +since).reverse(),
       task: async (id) => { const t = find(id); if (!t) throw new Upstream('todoist', 404); return { ...t }; },
-      close: async (id) => { const t = find(id); if (!t) throw new Upstream('todoist', 404); close(st(), t, tz, Date.now()); },
+      close: async (id) => { const t = find(id); if (!t) throw new Upstream('todoist', 404); close(st(), t, tz, Date.now()); return null; },
       reopen: async (id) => {
         const t = find(id);
         if (!t) throw new Upstream('todoist', 404);
         t.checked = false;
-        st().completions = st().completions.filter((c) => c.task_id !== id);
+        t.completed_at = null;
+        st().completions = st().completions.filter((c) => c.id !== id);
+        return null;
       },
       create: async (f) => {
-        const t = { id: String(1000 + ++st().n), project_id: f.project_id, section_id: null, content: f.content, description: '', labels: f.labels || [], child_order: 999, checked: false, added_at: new Date().toISOString(), due: null };
+        const t = { id: String(1000 + ++st().n), project_id: f.project_id, section_id: f.section_id || null, content: f.content, description: '', labels: f.labels || [], child_order: 999, checked: false, added_at: new Date().toISOString(), due: null };
         st().tasks.push(t);
         return t;
       },
+      // Todoist keeps the "completed" log entry and logs an "updated" one; only the date moves back.
       uncompleteRecurring: async (id, due) => {
         const t = find(id);
         if (!t) throw new Upstream('todoist', 404);
+        if (!due || !due.date) throw new Upstream('todoist-sync', 422);
         t.due = { ...t.due, date: due.date };
-        const today = zoned(tz, ymd(tz));
-        st().completions = st().completions.filter((c) => !(c.task_id === id && Date.parse(c.completed_at) >= +today));
+        t.completed_count = Math.max(0, (t.completed_count || 1) - 1);
+        t.updated_at = new Date().toISOString();
       },
     },
     weather: async () => weatherJson(tz),
