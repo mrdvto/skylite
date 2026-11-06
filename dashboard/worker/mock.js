@@ -58,6 +58,7 @@ const SHOPPING = [
 ];
 
 let state = null;
+const LOG_LAG = 15e3; // the real log has run 10–30 s behind
 
 function build(tz) {
   const today = ymd(tz), now = Date.now();
@@ -152,7 +153,8 @@ export function mockSource(S) {
       sections: async (pid) => (pid === 'p-chores' ? CHORE_SECTIONS : SHOP_SECTIONS).map((n, i) => ({ id: 's-' + n, name: n, section_order: i + 1 })),
       tasks: async (pid) => st().tasks.filter((t) => t.project_id === pid && !t.checked),
       completed: async (pid, since, until) => st().completions.filter((c) => c.project_id === pid && Date.parse(c.completed_at) >= +since && Date.parse(c.completed_at) <= +until).map((c) => ({ ...c })),
-      completions: async (pid, since) => st().log.filter((a) => a.parent_project_id === pid && Date.parse(a.event_date) >= +since).reverse(),
+      // Like Todoist, a close reaches the activity log only after a while.
+      completions: async (pid, since) => st().log.filter((a) => a.parent_project_id === pid && Date.parse(a.event_date) >= +since && Date.parse(a.event_date) <= Date.now() - LOG_LAG).reverse(),
       task: async (id) => { const t = find(id); if (!t) throw new Upstream('todoist', 404); return { ...t }; },
       close: async (id) => { const t = find(id); if (!t) throw new Upstream('todoist', 404); close(st(), t, tz, Date.now()); return null; },
       reopen: async (id) => {

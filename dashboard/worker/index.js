@@ -113,17 +113,25 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
-    try {
-      return await api(request, env, url);
-    } catch (e) {
-      if (e instanceof M.BadRequest) return json({ error: 'bad request' }, 400);
-      if (e instanceof M.NotFound) return json({ error: 'not found' }, 404);
-      if (e instanceof Upstream) {
-        console.log('upstream', e.service, e.status); // visible in `wrangler tail` only
-        return json({ error: 'upstream', service: e.service }, 502);
-      }
-      console.log('error', e && e.message);
-      return json({ error: 'server' }, 500);
-    }
+    const res = await handle(request, env, url);
+    // The deployed version: an open panel that sees it change reloads once it is idle.
+    const build = env.CF_VERSION_METADATA && env.CF_VERSION_METADATA.id;
+    if (build) res.headers.set('x-build', String(build).slice(0, 64));
+    return res;
   },
 };
+
+async function handle(request, env, url) {
+  try {
+    return await api(request, env, url);
+  } catch (e) {
+    if (e instanceof M.BadRequest) return json({ error: 'bad request' }, 400);
+    if (e instanceof M.NotFound) return json({ error: 'not found' }, 404);
+    if (e instanceof Upstream) {
+      console.log('upstream', e.service, e.status); // visible in `wrangler tail` only
+      return json({ error: 'upstream', service: e.service }, 502);
+    }
+    console.log('error', e && e.message);
+    return json({ error: 'server' }, 500);
+  }
+}

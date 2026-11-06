@@ -88,6 +88,8 @@ function todaysCompletion(log, t, today) {
     .sort((a, b) => String(b.event_date).localeCompare(String(a.event_date)))[0];
   return last && Date.parse(t.updated_at) - Date.parse(last.event_date) < 5e3 ? last : null;
 }
+// The activity log has run 10–30 s behind a close; past this a missing entry means "not done".
+const SETTLING = 90e3;
 const firstLine = (s) => String(s || '').split('\n')[0].slice(0, 120);
 
 // ------------------------------------------------------------------ chores
@@ -122,6 +124,9 @@ export async function chores(src, S) {
     if (!d) continue;
     if (d <= today) out.push(shape(t, false));
     else if (t.due.is_recurring && todaysCompletion(log, t, today)) out.push(shape(t, true));
+    // Closed moments ago (on a phone, say) and not in the lagging log yet: done or rescheduled is
+    // unknown, so the panel keeps the copy it already shows until the log decides.
+    else if (t.due.is_recurring && t.completed_count > 0 && Date.now() - Date.parse(t.updated_at) < SETTLING) out.push({ ...shape(t, false), settling: true });
     else continue;
     seen.add(String(t.id));
   }

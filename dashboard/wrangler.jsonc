@@ -12,6 +12,8 @@
   // Access guards the workers.dev hostname only; preview URLs (<version>-<name>.….workers.dev)
   // would skip it. Without this line every deploy turns them back on.
   "preview_urls": false,
+  // The deployed version id, sent as x-build on /api/* so open panels reload after a deploy.
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   // Workers Logs store logs on Cloudflare; keep them off (debug with `wrangler tail`).
   "observability": { "enabled": false }
 }

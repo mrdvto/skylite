@@ -293,11 +293,13 @@
   function onIdleTick() {
     idleSec++;
     var night = App.isNight();
-    if (night && App.mode === 'day' && idleSec >= App.idleSeconds()) { App.closeSheet(); App.go('home'); App.setMode('night'); return; }
+    // 'idle' resets the views (a half-typed shopping item, the Calendar page) at night too.
+    if (night && App.mode === 'day' && idleSec >= App.idleSeconds()) { App.closeSheet(); App.emit('idle'); App.go('home'); App.setMode('night'); return; }
     if (!night && App.mode === 'night') { App.setMode('day'); App.go('home'); return; }
     if (App.mode === 'day' && idleSec === App.idleSeconds()) { App.closeSheet(); App.emit('idle'); if (App.current !== 'home') App.go('home'); }
   }
   App.resetIdle = function () { idleSec = 0; };
+  App.idleFor = function () { return idleSec; };
   App.wake = function () { App.resetIdle(); App.setMode('day'); App.go('home'); };
 
   // ------------------------------------------------------------ stage scaling

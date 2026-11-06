@@ -180,10 +180,41 @@ What fixed it, in that project:
 - `color-mix(in oklab, …)` gradients, which Tailwind 4 also emits, rendered correctly on this
   WebView.
 
+## Third unit: SoC, no saved Wi-Fi, SystemUI disabled, root ADB over Wi-Fi
+
+A third unit with the same build string (`DP101_Frameo_V02_26061607`, Android 10, `ceres`), set up
+from a Windows 11 PC over USB in October 2026. It differed from the first unit as follows.
+
+**SoC.** `getprop ro.hardware` and `ro.boot.hardware` both return `sun50iw10p1`, Allwinner's name
+for the A133 / A100 family. `/proc/cpuinfo` has no `Hardware` line; it lists 4 cores with
+`CPU part 0xd03` (Cortex-A53). Userspace is 32-bit only, as on the second unit; about 2 GB RAM.
+
+**No saved Wi-Fi.** The frame arrived with no network saved, so step 4 above (checking that Wi-Fi is
+stored in Android before disabling Frameo) had nothing to check. It was joined later from Home HQ's
+two-finger menu → **Wi-Fi settings**, after Frameo was disabled.
+
+**SystemUI disabled by the vendor.** `pm list packages -d` lists `com.android.systemui` and
+`com.android.nfc` as disabled out of the box, so there is no navigation bar and no notification
+shade. The Home HQ navigation service (floating Back / Dashboard buttons) is the way out of Android
+Settings; enable it before relying on Settings.
+
+**Root ADB over Wi-Fi with no key.** Right after the first Wi-Fi join, adbd was listening on TCP
+port 9815 on all interfaces: `/system/etc/prop.default` sets `service.adb.tcp.port=9815`. A PC whose
+key the frame had never seen connected over the network and got `uid=0(root)` with no prompt, so
+anyone who can reach the frame on the network has a root shell. It was turned off by changing that
+line to `service.adb.tcp.port=-1` (plus the same `setprop` and an adbd restart for the running
+session); after a reboot port 9815 stayed closed and a connect from the PC was refused. USB ADB still
+needs no key. Check for this before putting a DP101 on a network you share:
+
+```sh
+adb shell "grep tcp.port /system/etc/prop.default; getprop service.adb.tcp.port"
+```
+
 ## Guesses
 
 - `ceres` is probably an Allwinner Android 10 platform name. The second unit's USB vendor ID `1f3a`
-  points to Allwinner, but the SoC model was not read from `/proc/cpuinfo` on either unit.
+  points to Allwinner, and the third unit reports `sun50iw10p1` (A133 / A100 family); whether the
+  first two units have the same SoC was not checked.
 - Why `var(--x,)` fails only for `@property`-registered variables: probably a WebView 113 bug with an
   empty fallback on a registered property. Not investigated; the table above is only what was
   measured.

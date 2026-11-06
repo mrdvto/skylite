@@ -43,6 +43,7 @@
     var opts = { method: method, redirect: 'manual', credentials: 'same-origin', headers: {} };
     if (body) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
     return fetch(path, opts).then(function (r) {
+      noteBuild(r.headers.get('x-build'));
       if (r.type === 'opaqueredirect' || r.status === 401 || r.status === 403) throw { auth: true };
       if (!r.ok) throw { status: r.status };
       return r.json();
@@ -88,11 +89,26 @@
     },
     chores: function () {
       return request('GET', '/api/chores').then(function (j) {
-        var P = pending.chores, have = {};
-        j.chores.forEach(function (c) { have[c.id] = true; if (overlay('chores', c.id, c.done)) c.done = P[c.id]; });
+        var P = pending.chores, have = {}, prev = {}, held = {};
+        ((S.chores && S.chores.chores) || []).forEach(function (c) { prev[c.id] = c; });
+        // Closed elsewhere moments ago, not in Todoist's log yet: keep the copy on screen (none yet:
+        // leave it out) instead of dropping it until the log says it was done.
+        j.chores = j.chores.filter(function (c) {
+          if (!c.settling) return true;
+          delete c.settling;
+          held[c.id] = true;
+          if (!prev[c.id]) return c.id in P;
+          c.done = prev[c.id].done; c.overdue = prev[c.id].overdue;
+          return true;
+        });
+        j.chores.forEach(function (c) {
+          have[c.id] = true;
+          // A held copy is not Todoist agreeing with a write, so it doesn't end the overlay.
+          if (held[c.id] ? c.id in P : overlay('chores', c.id, c.done)) c.done = P[c.id];
+        });
         // A recurring chore just ticked can be missing until the log catches up: keep the old copy.
-        ((S.chores && S.chores.chores) || []).forEach(function (c) {
-          if (c.id in P && !have[c.id]) j.chores.push(Object.assign({}, c, { done: P[c.id] }));
+        Object.keys(prev).forEach(function (id) {
+          if (id in P && !have[id]) j.chores.push(Object.assign({}, prev[id], { done: P[id] }));
         });
         S.chores = j;
       });
@@ -199,6 +215,34 @@
       }, function (err) { failed(err, 'calendar'); });
     }
   };
+
+  // ------------------------------------------------------------ new deploy
+  // Every /api/* answer names the deployed version (x-build). A different one than this page
+  // started with, seen for a minute (a deploy reaches every edge within seconds), means the page
+  // is out of date: reload once nobody is using the panel, nothing is being saved and the site
+  // answers, so the reload can't land on an error page.
+  var build = null, next = null, reloading = false;
+  var NEW_FOR = 60e3;
+  function noteBuild(b) {
+    if (!b) return;
+    if (!build) build = b;
+    else if (b === build) next = null;
+    else if (!next || next.id !== b) next = { id: b, at: Date.now() };
+  }
+  function busyWriting() { return Object.keys(pending.chores).length || Object.keys(pending.shopping).length; }
+  function reloadIfNew() {
+    if (!next || reloading || Date.now() - next.at < NEW_FOR) return;
+    if (App.mode !== 'night' && App.idleFor() < App.idleSeconds()) return;
+    if (busyWriting() || S.net.since || S.net.auth) return;
+    var el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
+    reloading = true;
+    fetch('/', { redirect: 'manual', cache: 'no-store', credentials: 'same-origin' }).then(function (r) {
+      if (r.ok) { location.reload(); return; }
+      throw r;
+    }).then(null, function () { reloading = false; if (next) next.at = Date.now(); }); // try again in a minute
+  }
+  App.on('second', reloadIfNew);
 
   // ------------------------------------------------------------ schedule
   // At night (black screen) refresh less often; waking refreshes anything older than its interval.
