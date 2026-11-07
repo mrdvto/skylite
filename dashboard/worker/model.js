@@ -12,13 +12,36 @@ export class BadRequest extends Error {}
 export class NotFound extends Error {}
 
 // ------------------------------------------------------------------ calendar
+const shownName = (a) => a.name || a.match;
+// norm() empties names with no Latin letters or digits; those must match exactly.
+const sameName = (a, b) => (norm(a) ? norm(a) === norm(b) : a === b);
+const isCal = (c, match) => String(c.id).toLowerCase() === String(match).toLowerCase() ||
+  [c.summaryOverride, c.summary].some((n) => n && sameName(n, match));
+
+// `calendars` in settings ({ match: id or Google name, name: shown name }) picks what the panel
+// shows on a person's real account, whatever is ticked in their own Google Calendar, and renames
+// it (the primary calendar is named after the email address). Without it, every ticked calendar
+// shows under its Google name, which suits an account kept just for the frame.
+function pickCalendars(all, allow) {
+  if (!allow) {
+    return all.filter((c) => c.selected)
+      .map((c) => ({ raw: c, name: c.summaryOverride || c.summary || 'Calendar' }));
+  }
+  const out = [];
+  for (const a of allow) {
+    const raw = all.find((c) => isCal(c, a.match) && !out.some((o) => o.raw === c));
+    if (raw) out.push({ raw, name: shownName(a) });
+  }
+  return out;
+}
+
 export async function calendar(src, S, from, to) {
   if (!isDay(from) || !isDay(to) || to <= from || to > addDays(from, MAX_DAYS)) throw new BadRequest('range');
   const tz = S.timezone;
-  const order = (S.columns || []).map(norm);
-  const list = (await src.calendar.calendars())
-    .filter((c) => c.selected)
-    .map((c) => ({ raw: c, name: c.summaryOverride || c.summary || 'Calendar' }))
+  // Without `columns`, an allow-list's own order is the column order.
+  const allow = Array.isArray(S.calendars) && S.calendars.length ? S.calendars : null;
+  const order = (S.columns && S.columns.length ? S.columns : (allow || []).map(shownName)).map(norm);
+  const list = pickCalendars(await src.calendar.calendars(), allow)
     .sort((a, b) => {
       const ia = order.indexOf(norm(a.name)), ib = order.indexOf(norm(b.name));
       return (ia < 0 ? 1e3 : ia) - (ib < 0 ? 1e3 : ib) || a.name.localeCompare(b.name);

@@ -1,4 +1,4 @@
-// Mock source for local runs (`wrangler dev --var MOCK:1`) until the frame's Google and Todoist
+// Mock source for local runs (`wrangler dev --var MOCK:1`) until the Google and Todoist
 // accounts exist. It answers in the same raw shapes as the live APIs, so model.js is exercised
 // unchanged. State lives in this isolate's memory and resets each day / restart.
 import { Upstream } from './sources.js';
@@ -46,9 +46,9 @@ const CHORES = [
   ['Evening', 'Buzzsaw', '🍴 Set the table', 1, 0], ['Evening', 'Buzzsaw', '🚿 Shower', 1, 0], ['Evening', 'Skidmark', '🛁 Bath', 1, 0],
   ['Evening', 'Wes', '🔐 Lock up', 1, 0], ['Evening', 'Claudia', '🫧 Run dishwasher', 1, 0], ['Evening', '', '🗑️ Garbage to curb', 0, 0],
 ];
-// Chores sections, as in the frame account: they only order the list, nothing groups by them.
+// Chores sections, as in a real account: they only order the list, nothing groups by them.
 const CHORE_SECTIONS = ['Morning', 'After school', 'Evening'];
-// Shopping sections, as in the frame account; stores without one are labels.
+// Shopping sections, as in a real account; stores without one are labels.
 const SHOP_SECTIONS = ['Corner Grocer', 'A&B Market', 'Warehouse', 'Other'];
 // [name, section or '', store label or '', done (got it)]
 const SHOPPING = [

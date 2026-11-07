@@ -3,6 +3,7 @@
   "weather": { "name": "Toronto", "latitude": 43.65, "longitude": -79.38 },
   "familyCalendar": "Family",
   "columns": [],
+  "calendars": [],
   "todoist": { "choresProject": "Chores", "shoppingProject": "Shopping" },
   "stores": [
     { "name": "Corner Grocer", "tab": true, "color": "#FFD701", "ink": "#191919" },

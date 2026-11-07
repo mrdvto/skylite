@@ -41,7 +41,12 @@
   // "Sign in needed" instead of a CORS failure that looks like being offline.
   function request(method, path, body) {
     var opts = { method: method, redirect: 'manual', credentials: 'same-origin', headers: {} };
-    if (body) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    if (body) {
+      opts.headers['content-type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+      // A kiosk sending a Cloudflare service token makes this request itself and can't see the body.
+      if (navigator.userAgent.indexOf('HomeHQ-Access') >= 0) opts.headers['x-hq-body'] = encodeURIComponent(opts.body);
+    }
     return fetch(path, opts).then(function (r) {
       noteBuild(r.headers.get('x-build'));
       if (r.type === 'opaqueredirect' || r.status === 401 || r.status === 403) throw { auth: true };

@@ -1,4 +1,4 @@
-// Live sources: Google Calendar (frame account, read-only), Todoist API v1 (frame account),
+// Live sources: Google Calendar (read-only), Todoist API v1,
 // Open-Meteo. Each call goes straight to the service; nothing is cached beyond short-lived
 // tokens and ids in this isolate's memory.
 

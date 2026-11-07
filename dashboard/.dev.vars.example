@@ -1,0 +1,15 @@
+# Copy to .dev.vars (git-ignored) and fill in. Read by local runs, and uploaded to the Worker with
+# `npx wrangler secret bulk .dev.vars`. Keep a copy in your password manager, never in chat or git.
+
+# Todoist: Settings > Integrations > Developer.
+TODOIST_TOKEN=""
+
+# Google Cloud: a Desktop app OAuth client, published to production.
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+# Written by `npm run google-token`.
+GOOGLE_REFRESH_TOKEN=""
+
+# Cloudflare Access: your team name, and the application's AUD tag.
+ACCESS_TEAM_DOMAIN=""
+ACCESS_AUD=""

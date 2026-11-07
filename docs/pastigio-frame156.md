@@ -3,6 +3,8 @@
 Original record of one unit, started 2026-10-09, with an [additional macOS unit report](#additional-unit-tested-on-macos-2026-10-12) below. Observations are kept separate from guesses. Unique
 identifiers (serial, MAC, IP) are left out; they live in the ignored `backups/` and `diagnostics/` folders.
 
+To install the dashboard on one of these, follow the [install runbook](pastigio-frame156-install.md).
+
 ## Observations (read-only unless noted)
 
 ### Identity

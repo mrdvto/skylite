@@ -4,6 +4,7 @@
 /log/
 /loader-*.txt
 /.claude/
+/.wrangler/
 .DS_Store
 __pycache__/
 *.pyc

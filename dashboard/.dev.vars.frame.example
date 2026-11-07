@@ -1,0 +1,6 @@
+# Copy to .dev.vars.frame (git-ignored) and fill in. Read by scripts/set-kiosk-access.sh only.
+# Keep these out of .dev.vars: that file goes to the Worker, and the Worker doesn't need them.
+
+DASHBOARD_URL="https://your-dashboard.workers.dev/"
+CF_ACCESS_CLIENT_ID=""
+CF_ACCESS_CLIENT_SECRET=""

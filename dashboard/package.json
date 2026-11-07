@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "settings": "node worker/settings.mjs",
+    "google-token": "node worker/google-token.mjs",
+    "test": "node --test worker/calendars.test.mjs worker/google-token.test.mjs",
     "worker": "vite build && node worker/settings.mjs && wrangler dev --var MOCK:1 --var ACCESS_AUD: --port 8787",
     "worker:todoist": "vite build && node worker/settings.mjs && wrangler dev --var MOCK:calendar --var ACCESS_AUD: --port 8788",
     "worker:live": "vite build && node worker/settings.mjs && wrangler dev --var LOCAL:1 --var ACCESS_AUD: --port 8789 --persist-to .wrangler/state-live",

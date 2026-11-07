@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -71,6 +72,8 @@ import java.util.Map;
  *     adb shell cmd package set-home-activity com.wesbos.homehq/.Home
  * - Wi-Fi with a sign-in page (captive portal): when the dashboard can't load on Wi-Fi, the kiosk
  *   checks for one and shows it, so the terms can be accepted; then it returns to the dashboard.
+ * - Cloudflare Access without a sign-in on the panel: scripts/set-kiosk-access.sh saves a service
+ *   token, sent only to the origin of the URL saved at that moment. See AccessToken and the README.
  */
 public class MainActivity extends Activity {
   static final String TAG = "HomeHQ";
@@ -79,6 +82,12 @@ public class MainActivity extends Activity {
   static final String PREF_URL = "url";
   static final String PREF_MENU_BUTTON = "menu_button";
   static final String PREF_ORIENTATION = "orientation";
+  static final String PREF_ACCESS_ID = "access_client_id";
+  static final String PREF_ACCESS_SECRET = "access_client_secret";
+  static final String PREF_ACCESS_ORIGIN = "access_origin";
+  static final String EXTRA_ACCESS_CLEAR = "access_clear";
+  static final int TRUST_WAIT_TRIES = 20;
+  static final long TRUST_WAIT_MS = 50;
   static final long EXIT_HOLD_MS = 1500;
   static final int CANCEL_POINTER_IDS = 10; // touch ids 0-9
   static final long RETRY_MS = 5000;
@@ -98,6 +107,11 @@ public class MainActivity extends Activity {
   static final int PROBE_ONLINE = 0, PROBE_PORTAL = 1, PROBE_FAILED = 2;
 
   private WebView web;
+  // Read on WebView's request threads.
+  private volatile AccessToken access;
+  // The document on screen is the dashboard. Requests carry the token only then, so a Wi-Fi sign-in
+  // page or a link from another app can't use it. Set at commit: the old page lives until then.
+  private volatile boolean docTrusted;
   private Button menuButton;
   private final Handler handler = new Handler(Looper.getMainLooper());
   // Not cleared in onDestroy, so a navigation rebind that has started always finishes.
@@ -194,6 +208,9 @@ public class MainActivity extends Activity {
     WebSettings s = web.getSettings();
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
+    // The token sits in this app's files; nothing here needs file: or content: pages.
+    s.setAllowFileAccess(false);
+    s.setAllowContentAccess(false);
     s.setUseWideViewPort(true);
     s.setMediaPlaybackRequiresUserGesture(false);
     // Keep navigation inside the kiosk. When the kiosk starts at boot before Wi-Fi is up, the
@@ -202,11 +219,30 @@ public class MainActivity extends Activity {
     web.setWebViewClient(new WebViewClient() {
       @Override
       public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
-        return localAsset(req.getUrl());
+        WebResourceResponse local = localAsset(req.getUrl());
+        return local != null ? local : viaAccess(req);
+      }
+
+      // With a token, the Access sign-in page only appears when a request fell back to WebView
+      // after a network failure (a refused token gets AccessToken's own page). Nobody is there to
+      // sign in, so try again instead of stopping on it.
+      @Override
+      @SuppressWarnings("deprecation")
+      public boolean shouldOverrideUrlLoading(WebView view, String url) {
+        if (access == null || !AccessToken.isSignIn(url)) return false;
+        Log.w(TAG, "Sent to the Access sign-in with a token saved, retrying in " + RETRY_MS + " ms");
+        retryUrl = savedUrl();
+        handler.removeCallbacks(retry);
+        handler.removeCallbacks(stall);
+        retryPending = true;
+        handler.postDelayed(retry, RETRY_MS);
+        return true;
       }
 
       @Override
       public void onPageStarted(WebView view, String url, Bitmap icon) {
+        AccessToken token = access;
+        docTrusted = token != null && token.origin.equals(AccessToken.origin(url));
         pageFailed = false;
         mainUrl = url;
       }
@@ -305,6 +341,8 @@ public class MainActivity extends Activity {
     setContentView(root);
 
     String url = urlFrom(getIntent());
+    applyAccessFlag(getIntent());
+    useSavedAccess();
     load(url != null ? url : savedUrl());
     @SuppressWarnings("deprecation")
     IntentFilter connectivity = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
@@ -334,6 +372,10 @@ public class MainActivity extends Activity {
     applyOrientationFlag(intent);
     applyMenuButtonFlag(intent);
     String url = urlFrom(intent);
+    if (applyAccessFlag(intent)) {
+      useSavedAccess();
+      if (url == null) url = savedUrl();
+    }
     if (url != null) {
       closePortal();
       handler.removeCallbacks(retry);
@@ -347,16 +389,83 @@ public class MainActivity extends Activity {
   /** A "url" extra is saved for later launches. A VIEW link from another app is shown, not saved. */
   private String urlFrom(Intent intent) {
     String saved = intent.getStringExtra(PREF_URL);
-    if (saved == null) return intent.getDataString();
-    // The activity is exported, so only save web URLs: never file:, content: or javascript:.
-    String scheme = Uri.parse(saved).getScheme();
+    String url = saved != null ? saved : intent.getDataString();
+    if (url == null) return null;
+    // The activity is exported, so only open web URLs: never file:, content: or javascript:.
+    String scheme = Uri.parse(url).getScheme();
     if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
       Log.w(TAG, "Ignoring non-web kiosk URL (scheme " + scheme + ")");
       return null;
     }
+    if (saved == null) return url;
     getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_URL, saved).apply();
     Log.i(TAG, "Saved kiosk URL: " + forLog(saved));
     return saved;
+  }
+
+  /**
+   * Saves or clears the Access service token; true if it changed. The activity is exported and
+   * any app can change the saved URL, so the token is tied to the URL sent in the same intent.
+   */
+  private boolean applyAccessFlag(Intent intent) {
+    if (intent == null) return false;
+    String id = intent.getStringExtra(PREF_ACCESS_ID), secret = intent.getStringExtra(PREF_ACCESS_SECRET);
+    boolean clear = intent.getBooleanExtra(EXTRA_ACCESS_CLEAR, false);
+    intent.removeExtra(PREF_ACCESS_ID);
+    intent.removeExtra(PREF_ACCESS_SECRET);
+    intent.removeExtra(EXTRA_ACCESS_CLEAR);
+    if (clear) {
+      getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(PREF_ACCESS_ID).remove(PREF_ACCESS_SECRET)
+          .remove(PREF_ACCESS_ORIGIN).apply();
+      Log.i(TAG, "Access token cleared");
+      return true;
+    }
+    if (id == null && secret == null) return false;
+    String url = intent.getStringExtra(PREF_URL);
+    String origin = url == null ? null : AccessToken.origin(url);
+    if (AccessToken.of(origin, id, secret) == null) {
+      Log.w(TAG, "Ignoring Access token: bad value, or no https url extra with it");
+      return false;
+    }
+    getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_ACCESS_ID, id)
+        .putString(PREF_ACCESS_SECRET, secret).putString(PREF_ACCESS_ORIGIN, origin).apply();
+    Log.i(TAG, "Access token saved for " + origin);
+    return true;
+  }
+
+  /** Loads the saved token, and tells the page through the user agent. */
+  private void useSavedAccess() {
+    SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+    access = AccessToken.of(p.getString(PREF_ACCESS_ORIGIN, null), p.getString(PREF_ACCESS_ID, null),
+        p.getString(PREF_ACCESS_SECRET, null));
+    WebSettings s = web.getSettings();
+    String ua = s.getUserAgentString().replace(" " + AccessToken.UA_MARK, "");
+    s.setUserAgentString(access != null ? ua + " " + AccessToken.UA_MARK : ua);
+  }
+
+  /** Null lets WebView do the request itself; with the network down that gives the usual offline handling. */
+  private WebResourceResponse viaAccess(WebResourceRequest req) {
+    AccessToken token = access;
+    if (token == null) return null;
+    String url = req.getUrl().toString(), method = req.getMethod();
+    boolean own = token.covers(url, method), main = req.isForMainFrame();
+    if (main && !own) docTrusted = false; // leaving the dashboard: stop before that page can run
+    if (!own) return null;
+    // The dashboard's first scripts can get here just before onPageStarted. A GET that waits and
+    // then belonged to the page being replaced only feeds a page that's gone. Writes never wait.
+    for (int i = 0; !main && !docTrusted && "GET".equals(method) && i < TRUST_WAIT_TRIES; i++) {
+      SystemClock.sleep(TRUST_WAIT_MS);
+    }
+    if (!AccessToken.allowed(main, method, docTrusted)) return null;
+    try {
+      AccessToken.Reply r = token.fetch(url, method, req.getRequestHeaders(), main);
+      if (r.status == 401 || r.status == 403) Log.w(TAG, "Access refused the token (" + r.status + ")");
+      return new WebResourceResponse(r.mime, r.charset, r.status, r.reason, r.headers, r.body);
+    } catch (IOException | RuntimeException e) {
+      // Type only: a message could quote the request.
+      Log.w(TAG, "Request through Access failed: " + e.getClass().getSimpleName());
+      return null;
+    }
   }
 
   /**
@@ -376,6 +485,9 @@ public class MainActivity extends Activity {
   // page here too.
   private void load(String url) {
     mainUrl = url;
+    AccessToken token = access;
+    // The first load has no earlier page to worry about.
+    if (web.getUrl() == null) docTrusted = token != null && token.origin.equals(AccessToken.origin(url));
     web.loadUrl(url);
   }
 

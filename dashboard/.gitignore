@@ -3,8 +3,9 @@ dist
 .wrangler
 kiosk/build
 
-# Local Worker secrets (wrangler). Real values live in Proton Pass.
+# Local Worker secrets (wrangler). Real values live in a password manager.
 .dev.vars*
+!.dev.vars*.example
 # Private settings, linked in from the private repo. No trailing slash, so a link is ignored too.
 /private
 # Worker settings picked at build time (private copy when linked in)

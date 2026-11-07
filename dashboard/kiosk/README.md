@@ -58,6 +58,41 @@ URL when run without one.
 Every later launch, including after a reboot, opens the saved URL. Links that other apps open
 in the kiosk, such as a sign-in page, are shown but not saved.
 
+## Cloudflare Access without a sign-in
+
+A dashboard behind Cloudflare Access normally needs an email and PIN typed on the panel, again
+when the session ends. A service token avoids both. Create one in Zero Trust, add a **Service
+Auth** policy for it to the Access application, and put it in `dashboard/.dev.vars.frame`
+(git-ignored; keep it out of `.dev.vars`, which goes to the Worker):
+
+```sh
+DASHBOARD_URL="https://your-dashboard/"
+CF_ACCESS_CLIENT_ID="...access"
+CF_ACCESS_CLIENT_SECRET="..."
+```
+
+This saves the URL and the token together. The kiosk refuses a token sent without a URL:
+
+```sh
+scripts/set-kiosk-access.sh
+scripts/set-kiosk-access.sh --clear    # back to the normal sign-in
+```
+
+Access in strict mode gives no session cookie, and organizations created since 2026-10-05 can't
+turn strict mode off. So Home HQ makes every GET, HEAD and POST to the dashboard's origin itself
+with the token headers, and adds `HomeHQ-Access` to its user agent. WebView hides POST bodies from
+the app, so the dashboard's `js/data.js` repeats each body in an `x-hq-body` header. A page of your
+own needs to do the same.
+
+The token goes only to the origin saved with it, over https, even if the saved URL changes later,
+and only for the dashboard page itself: a Wi-Fi sign-in page or a link from another app shown in
+the kiosk can't use it. The kiosk also doesn't open `file:`, `content:` or `javascript:` links. It's in the app's private prefs, in plain text: anyone with root
+on the frame can read it. Cookies from those replies are dropped. A refused token shows a message
+on the panel that tries again every 5 minutes. To cut a frame off, delete the token in Cloudflare.
+
+Tested with `python kiosk/test-access.py` on a PC against a local server, not yet on a frame or
+against Cloudflare.
+
 ## A page bundled in the APK (no server)
 
 A static page can ship inside the APK instead of being hosted. Build with `KIOSK_SITE` set to a
