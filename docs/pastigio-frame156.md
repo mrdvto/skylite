@@ -5,6 +5,8 @@ identifiers (serial, MAC, IP) are left out; they live in the ignored `backups/` 
 
 To install the dashboard on one of these, follow the [install runbook](pastigio-frame156-install.md).
 
+Not every unit matches the first record: one reports model `M15R4` and shipped [WebView 61](#fifth-unit-m15r4-firmware-v2025052119-webview-61-2026-11-09).
+
 ## Observations (read-only unless noted)
 
 ### Identity
@@ -410,3 +412,77 @@ not listening. **mDNS `.local` names do not resolve** on this Android 8.1 build
 Assistant dashboard over plain `http://` loaded in the kiosk on WebView 106.
 
 Motion/PIR, loader mode, firmware restore and a WebView upgrade were not tested on this unit.
+
+## Fifth unit: `M15R4`, firmware v2025052119, WebView 61 (2026-11-09)
+
+> **Record of one unit.** Windows host, USB direct. The `/system` write below breaks the
+> install runbook's default and needed the owner's explicit approval.
+
+| Observation | Value |
+| --- | --- |
+| Brand / manufacturer | `Pastigio` / `rockchip` |
+| `ro.product.model`, `device`, `name` | `M15R4`, all three. Not `FRAME156` |
+| Firmware | `FrameO.DP105F.v2025052119`, older than the units above |
+| Fingerprint | `rockchip/rk3326_32bit/rk3326_32bit:8.1.0/OC/195458:user/release-keys` |
+| SoC / Android | `rk3326`, `armeabi-v7a,armeabi`, 8.1.0, API 27, patch 2020-11-05 |
+| Display | 1920x1080, 170 dpi |
+| RAM | 974 MB, `ro.config.low_ram=true`, zram 368 MB |
+| USB (ADB) | `2211:0006`, product `M15R4` |
+| **WebView as shipped** | **`com.android.webview` 61.0.3163.98**, `/system/app/webview`, the only provider |
+| Stock `webview.apk` | 52,400,920 bytes, SHA-256 `db1f9a147730a4893670ea98fc72ee8060fdc0b0861485bec8ba63405affbc3b`, plus `oat/arm/` |
+| Frameo | `net.frameo.frame` v1.32.18 (updated), system copy v1.25.7 |
+| Other vendor apps | `com.muxintu.app.mxota` 1.2.5, `android.rockchip.update.service`, `com.szclink.app.cldevicetest` |
+| Launcher3 | Already disabled |
+| Root / SELinux | Shipped `su -c id` gives uid 0 without a prompt, `CAP_SYS_ADMIN` effective; `Permissive` |
+| `/system` | `mmcblk2p11` ext4 `ro`, no `dm-` devices, 833 MB free. `ro.boot.veritymode=enforcing`, `ro.boot.flash.locked=1` |
+| eMMC | 61,063,168 sectors. `userdata` starts at 5,612,544, as on the first unit |
+| CA store | 252 roots, includes ISRG Root X1 (`6187b673.0`) |
+| Network ADB | 5555 and 9815 not listening |
+
+### USB and network
+
+The first cable showed nothing on Windows: no `FRAME156`, no failed device, no `unauthorized`, even with ADB Access on
+and after an `adb` server restart. A different USB-A to USB-C cable worked. Windows played connect then disconnect once as it
+settled, and the device then stayed connected. The cable was the only change observed.
+
+The frame was already on guest Wi-Fi when first read, with Frameo and `com.muxintu.app.mxota` running and connected
+out. During the session it reported "loaded an update" and restarted. Firmware, Frameo version and WebView were all unchanged afterwards;
+which update it was is unknown.
+
+### Backup (verified)
+
+Sectors 0-5,612,544 by the base64 method in [Backup](#backup-2026-10-09-verified), about 7 minutes, 524 MB gzipped. The readback was
+exactly 2,873,622,528 bytes, no 1 MiB block was all `0xCC`, and the pre-partition area and `p1`-`p15` matched device-side hashes, except
+`oem`: one byte at partition offset `0x1702b` (`0x00` in the backup, `0x02` later), the same journal byte as on the other units. `userdata`,
+`mmcblk2boot0/1` and `rpmb` were not captured. Restore was not tested.
+
+### WebView 106 in `/system`
+
+The newest WebView Android 8.1 can run is 138 (Chromium 139 needs API 29). 106 was chosen because it is the dashboard's build target and is
+smaller on a 1 GB frame. Source: LineageOS `android_external_chromium-webview_prebuilt_arm` at `4b0ae494a7dd`, a plain blob (not LFS),
+55,529,950 bytes, SHA-256 `e2edc1f89ec1608b169da9e7ffc037190b70c7825f0be29694f4cae719980580`, verified after download.
+
+1. Backup above. Save a PC copy of `/system/app/webview` and its hashes.
+2. `pm disable-user --user 0 com.muxintu.app.mxota`, wait 30 seconds, check `enabled="3"` in `package-restrictions.xml`.
+3. On the PC, extract `lib/armeabi-v7a/*.so` from the APK: `libchromium_android_linker.so`, `libcrashpad_handler_trampoline.so`,
+   `libwebviewchromium.so`. They are deflated in the APK and `/system/app/webview/lib` does not exist, so Android won't extract them.
+4. Push the APK and libraries to `/data/local/tmp`, check SHA-256 on the frame. The frame has `sha256sum` and `cut` but **no `awk`**.
+5. As root, stopping and restoring on any failure: `mount -o remount,rw /system`, test a write, build `/system/homehq-new-webview` with
+   `webview.apk` and `lib/arm/*.so` (root:root, directories 0755, files 0644, `chcon -R u:object_r:system_file:s0`), and check hashes. Move
+   `/system/app/webview` to `/system/homehq-stock-webview`, outside `/system/app` so it isn't scanned. That also removes the stale
+   `oat/`. Move the new tree into place, check hashes, `sync`, remount read-only.
+6. `adb reboot`. ADB did not return within 165 seconds; replugging USB at the frame end restored it.
+
+After the reboot `dumpsys webviewupdate` reported `com.android.webview, 106.0.5249.126`, relros 1 of 1, with no `dlopen` errors. Logcat showed
+`System package com.android.webview signature changed; retaining data.` So on this firmware Android accepts a differently signed WebView
+placed in `/system` at boot, although [`adb install` is refused on sister frames](arzopa-p156w.md#the-webview-swap-does-not-work-on-this-unit-the-signatures-differ).
+
+Undo (not run): `mount -o remount,rw /system`, `rm -rf /system/app/webview`, `mv /system/homehq-stock-webview /system/app/webview`, `sync`,
+`mount -o remount,ro /system`, reboot.
+
+### Kiosk
+
+With density 160 and the service token, the kiosk showed the live dashboard on WebView 106 with no typing (screencap). It enabled its own navigation service on first launch:
+`WRITE_SECURE_SETTINGS` showed as granted with no `pm grant` run. There is no navigation bar on this unit.
+
+Not proven at the time of writing: the two-finger gesture, disabling Frameo, booting into the kiosk, and Wi-Fi behaviour after that. Motion/PIR, loader mode and firmware restore were not tested.

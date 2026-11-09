@@ -8,7 +8,7 @@ Frame steps come from [pastigio-frame156.md](pastigio-frame156.md) (4 unit recor
 
 ## Have ready
 
-- Frame, wall power, **short USB-A → USB-C data cable** straight into PC (no hub). C-to-C failed on a sister model
+- Frame, wall power, **short USB-A → USB-C data cable** straight into PC (no hub). C-to-C failed on a sister model. A power-only cable shows nothing on the PC, not even `unauthorized`: test the cable with a phone
 - Windows PC with Claude desktop app, Code tab
 - Password manager. Phone
 - Guest / IoT Wi-Fi for frame (not main network)
@@ -86,6 +86,7 @@ Read skylite/frames/pastigio-frame156/handoff.md. I want: <what it should do, in
 - Panel black 8:30 PM–6 AM by default. Tap wakes it
 - After a reboot, PC may not see frame until USB replugged. Panel itself is fine
 - Frameo looks involved at first: it's the stock app, needed only to switch ADB on, then disabled
+- Same listing, older firmware: at least one frame reports model `M15R4` and ships WebView 61. You can't tell before Session 3. It adds a backup and one decision for you: see [WebView under 106](#webview-under-106)
 - Google warns "app not verified": it's your own app. Advanced → continue
 
 ---
@@ -119,7 +120,7 @@ Read skylite/frames/pastigio-frame156/handoff.md. I want: <what it should do, in
 
 **Already decided (don't reopen)**
 - Separate household: own Cloudflare, Todoist, Google. Real Google account, no frame account
-- **No full backup, no WebView swap.** Stock WebView 106 meets the build target (`chrome106`). Price of that: no `/system` or partition writes, ever, in this install
+- **No full backup, no WebView swap.** Stock WebView 106 meets the build target (`chrome106`). Price of that: no `/system` or partition writes, ever, in this install. Holds only if the frame has WebView 106 or newer. If not, [WebView under 106](#webview-under-106) is the owner's call
 - Todoist: one family account signed in on phones, unless owner wants otherwise. No per-person sharing
 - Nothing stored on Cloudflare. Observability off, preview URLs off (both in `wrangler.jsonc`; don't toggle in dashboard)
 - Panels default to: Today, Calendar, Chores, Shopping, Weather. Owner may change anything in grilling
@@ -183,11 +184,11 @@ Verify on real data: Today, Calendar views, Chores, Shopping, no console errors,
 
 Sources: [pastigio-frame156.md](pastigio-frame156.md), [kiosk README](../dashboard/kiosk/README.md). Git Bash mangles `/data/...` in adb args: `MSYS_NO_PATHCONV=1`.
 
-Frame stays offline for this whole session.
+Frame stays offline for this whole session. It may already be online when first read, even if nobody joined it this session: check Wi-Fi in step 3. Online = confirm it's the guest network, then treat as in step 1.
 
 1. **Owner on panel:** Frameo Settings → off "transfer from computer" → About → Beta Program → ADB Access on, accept warning. Turn off any sleep schedule. If first-run insists on Wi-Fi, use guest Wi-Fi; Claude then disables `com.muxintu.app.mxota` first, before anything else. Don't tap power off
-2. `unauthorized`? In order: accept on-screen warning; ADB Access off/on with USB in; `adb kill-server`, `adb start-server`; other USB port. Use current platform-tools. Stop any other adb (SuperDisplay etc). Match on product `FRAME156`; vendor ID varies
-3. Read only, into `SETUP.md`: model, firmware, Android, display, density, WebView, `su -c id`, packages, listening ports, timezone, Launcher3 state
+2. `unauthorized`? In order: accept on-screen warning; ADB Access off/on with USB in; `adb kill-server`, `adb start-server`; other USB port. Use current platform-tools. Stop any other adb (SuperDisplay etc). Nothing listed at all, not even `unauthorized`: cable or port, not the frame; swap cable and test it with a phone. Match on product `FRAME156` or `M15R4`; vendor ID varies
+3. Read only, into `SETUP.md`: model, firmware, Android, display, density, WebView, `su -c id`, packages, listening ports, timezone, Launcher3 state, Wi-Fi state. Check model and WebView before any write
 4. `svc power stayon true` (frame idles off otherwise)
 5. Install `homehq.apk`. Keep the debug keystore: `install -r` needs same key
 6. `--ez home true`, then `cmd package set-home-activity com.wesbos.homehq/.Home`. Order matters
@@ -201,7 +202,16 @@ Frame stays offline for this whole session.
 
 Undo: `pm enable <pkg>`, `adb uninstall com.wesbos.homehq`, `wm density reset`, `svc power stayon false`, `--ez home false`.
 
-**Stop conditions, ask owner:** not `FRAME156`. WebView under 106. Still `unauthorized` after step 2. Anything needing `/system`, Loader mode, a partition write, or key injection. (If so, offer pre-userdata backup first: about 10 min, method in record. Then owner decides.)
+**Stop conditions, ask owner:** not `FRAME156` (`M15R4` on `rk3326`, Android 8.1 and firmware `FrameO.DP105F.*` has matched so far, one unit: tell owner, get an OK once). WebView under 106. Still `unauthorized` after step 2. Anything needing `/system`, Loader mode, a partition write, or key injection. (If so, offer pre-userdata backup first: about 10 min, method in record. Then owner decides.)
+
+### WebView under 106
+
+Firmware `v2025052119` shipped WebView 61; the dashboard build target is `chrome106`. The Session 3 prompt doesn't approve what follows. Tell owner the options, get a clear yes to the one chosen.
+
+- **Exchange the frame.** Lowest risk, if returnable. A replacement may be the same firmware
+- **Replace WebView in `/system`.** Done once on `M15R4`; steps, traps and undo in the [record](pastigio-frame156.md#fifth-unit-m15r4-firmware-v2025052119-webview-61-2026-11-09). Reverses "no `/system` writes" for this frame only. Verified pre-userdata backup first. Restore needs Loader mode, untested
+- Target LineageOS WebView **106.0.5249.126**, the build target. 138 is the newest Android 8.1 can run, not needed here
+- A normal `adb install -r` is expected to fail: vendor-signed
 
 ## Finish plan (Session 4)
 
