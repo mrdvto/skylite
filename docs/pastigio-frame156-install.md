@@ -38,7 +38,7 @@ Make empty folder `C:\home-frame`, open it in Code tab. One session per block, i
 
 ```text
 Clone https://github.com/mrdvto/skylite into this folder, then read docs/pastigio-frame156-install.md and follow "Rules for Claude". This is Session 1.
-Do: install what's missing, build homehq.apk, create the private folder, grill me on requirements (one question at a time, requirements only, use /grilling if available), record answers, then write private settings and run the tests in "Built for this install". Commit at the end. Write the handoff.
+Do: install what's missing, build homehq.apk, create the private folder, ask me everything in "Grill list" (one question at a time, requirements only, recommend an answer each time, push back on vague answers, keep going until nothing is open), record answers, then write private settings and run the tests in "Built for this install". Commit at the end. Write the handoff.
 ```
 
 **Session 2: accounts, calendar, deploy**
@@ -105,7 +105,7 @@ Read skylite/frames/pastigio-frame156/handoff.md. I want: <what it should do, in
 - Private folder next to `skylite`, any name, own git repo, never in public fork. Holds `frames/` and `dashboard/`. Start `dashboard/settings.json` from `dashboard/worker/settings.example.json`. Layout: [frame-records.md](frame-records.md)
 - Link it in from `skylite` with `cmd`, no admin needed, both git-ignored: `mklink /J frames <full path of private folder>\frames`, then `mklink /J dashboard\private <full path of private folder>\dashboard`. Sessions reach it through these links, so its name is never needed
 - Frame folder `frames/pastigio-frame156/`: `checklist.md`, `handoff.md`, `changes.jsonl`, `SETUP.md`
-- Handoff: overwrite `handoff.md` there. Never OS temp, never repo root
+- Handoff: plain file, no skill needed. End of every session, overwrite `frames/pastigio-frame156/handoff.md`. Never OS temp, never repo root. Written for a new session with no memory: where things stand, what is proven and how, what is not done, exact next step, owner decisions made, problems hit and the fix, file and URL names (never secrets)
 - Commit at end of each session without asking. Push the private folder only if it has a private remote. Never push to `mrdvto/skylite` or upstream
 - Requirements go in `checklist.md` before code. `changes.jsonl` written with `json.dumps`, each line checked
 
