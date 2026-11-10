@@ -139,7 +139,7 @@ All in repo, tests pass on PC. Never run against a real Google account, real Acc
 
 **B2 Service token in kiosk.** No email + PIN on panel, no monthly sign-in. New Cloudflare accounts are in strict mode: can't turn off, no session cookie. So kiosk makes every request to the dashboard itself, with token headers. POST bodies travel in `x-hq-body`, set by page. Token goes only to origin saved at the time; never in APK, URL, or page JS. Details: [kiosk README](../dashboard/kiosk/README.md#cloudflare-access-without-a-sign-in).
 - `scripts/set-kiosk-access.sh` saves URL + token together. Reads `dashboard/.dev.vars.frame`. Token works only for dashboard page itself, not Wi-Fi sign-in pages or other apps' links
-- Proof (Session 3): panel loads with no typing, after reboot too. Proof (Session 4): shopping add with an accent or Chinese character, from panel
+- Proof (Session 3): panel loads with no typing, after reboot too. Proof (Session 4): shopping add from panel
 - Refused token: panel says so, tries again every 5 min
 - If proofs fail after one real try: `set-kiosk-access.sh --clear`, use PIN sign-in, tell owner. Re-sending `--es url` reopens email page after a typo; Back only closes keyboard
 
@@ -223,7 +223,7 @@ Claude's notes, not owner options:
 2. Check clock, timezone. Wrong time on panel: check dashboard demo mode before blaming frame. Dashboard loads, no typing. TLS error on workers.dev = old CA store: see [building-for-the-frame.md](building-for-the-frame.md)
 3. **Network ADB check,** on frame over USB and from PC: ports 5555 and 9815. Another frame shipped unauthenticated root on 9815, seen only after Wi-Fi. Open = close it without `/system` (`setprop`, restart adbd), recheck after reboot. Won't stick = stop condition; router isolation becomes mandatory
 4. **Owner:** router rules. Frame needs out: DNS, HTTPS, NTP only
-5. Prove with owner, both directions: chore tick, untick, shopping tick, add, Put back. Panel add must include an accent or Chinese character (B2 proof). Recurring chore: phone tick can take 60 s
+5. Prove with owner, both directions: chore tick, untick, shopping tick, add, Put back. Recurring chore: phone tick can take 60 s
 6. Prove a redeploy reloads panel unaided once idle (about 1 min)
 7. Reboot: back to dashboard, data live, ADB state unchanged
 8. Unplug USB. Leave `stayon` on. Summary for owner: URLs, accounts, how to revoke Google, service token expiry date and how to delete it, what "Offline since" and "Sign in needed" mean, resume prompt
