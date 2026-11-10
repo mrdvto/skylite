@@ -478,7 +478,7 @@ After the reboot `dumpsys webviewupdate` reported `com.android.webview, 106.0.52
 placed in `/system` at boot, although [`adb install` is refused on sister frames](arzopa-p156w.md#the-webview-swap-does-not-work-on-this-unit-the-signatures-differ).
 
 Undo (not run): `mount -o remount,rw /system`, `rm -rf /system/app/webview`, `mv /system/homehq-stock-webview /system/app/webview`, `sync`,
-`mount -o remount,ro /system`, reboot.
+`mount -o remount,ro /system`, reboot, then `pm enable com.muxintu.app.mxota` to bring the vendor updater back.
 
 ### Kiosk
 

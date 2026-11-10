@@ -4,7 +4,7 @@ For someone who makes business calls only. Claude makes every technical call. Yo
 
 Result: 15.6" frame shows your family dashboard: calendar, chores, shopping, weather. Family edits from phones; ticks work on panel.
 
-Frame steps come from [pastigio-frame156.md](pastigio-frame156.md) (4 unit records).
+Frame steps come from [pastigio-frame156.md](pastigio-frame156.md) (one record per tested unit).
 
 ## Have ready
 
@@ -86,7 +86,7 @@ Read skylite/frames/pastigio-frame156/handoff.md. I want: <what it should do, in
 - Panel black 8:30 PM–6 AM by default. Tap wakes it
 - After a reboot, PC may not see frame until USB replugged. Panel itself is fine
 - Frameo looks involved at first: it's the stock app, needed only to switch ADB on, then disabled
-- Same listing, older firmware: at least one frame reports model `M15R4` and ships WebView 61. You can't tell before Session 3. It adds a backup and one decision for you: see [WebView under 106](#webview-under-106)
+- Not every frame matches: at least one reports model `M15R4`, has older firmware and ships WebView 61. You can't tell before Session 3. It adds one decision for you, and maybe a backup: see [WebView under 106](#webview-under-106)
 - Google warns "app not verified": it's your own app. Advanced → continue
 
 ---
@@ -184,11 +184,11 @@ Verify on real data: Today, Calendar views, Chores, Shopping, no console errors,
 
 Sources: [pastigio-frame156.md](pastigio-frame156.md), [kiosk README](../dashboard/kiosk/README.md). Git Bash mangles `/data/...` in adb args: `MSYS_NO_PATHCONV=1`.
 
-Frame stays offline for this whole session. It may already be online when first read, even if nobody joined it this session: check Wi-Fi in step 3. Online = confirm it's the guest network, then treat as in step 1.
+Frame stays offline for this whole session. It may already be online when first read, even if nobody joined it this session: check Wi-Fi in step 3. On the guest network = leave it connected, and step 3 covers the updater. Not guest, or can't tell = `svc wifi disable` at once, tell owner, and note in the handoff that Session 4 must forget that network when joining guest.
 
-1. **Owner on panel:** Frameo Settings → off "transfer from computer" → About → Beta Program → ADB Access on, accept warning. Turn off any sleep schedule. If first-run insists on Wi-Fi, use guest Wi-Fi; Claude then disables `com.muxintu.app.mxota` first, before anything else. Don't tap power off
+1. **Owner on panel:** Frameo Settings → off "transfer from computer" → About → Beta Program → ADB Access on, accept warning. Turn off any sleep schedule. If first-run insists on Wi-Fi, use guest Wi-Fi; Claude then disables `com.muxintu.app.mxota` as soon as step 3 has read model and WebView. Don't tap power off
 2. `unauthorized`? In order: accept on-screen warning; ADB Access off/on with USB in; `adb kill-server`, `adb start-server`; other USB port. Use current platform-tools. Stop any other adb (SuperDisplay etc). Nothing listed at all, not even `unauthorized`: cable or port, not the frame; swap cable and test it with a phone. Match on product `FRAME156` or `M15R4`; vendor ID varies
-3. Read only, into `SETUP.md`: model, firmware, Android, display, density, WebView, `su -c id`, packages, listening ports, timezone, Launcher3 state, Wi-Fi state. Check model and WebView before any write
+3. Read only, into `SETUP.md`: model, firmware, Android, display, density, WebView, `su -c id`, packages, listening ports, timezone, Launcher3 state, Wi-Fi state. Check model and WebView before any write. If model is `FRAME156` (or `M15R4` once owner has OK'd it, see stop conditions) and the frame is online, the first write is `pm disable-user --user 0 com.muxintu.app.mxota`
 4. `svc power stayon true` (frame idles off otherwise)
 5. Install `homehq.apk`. Keep the debug keystore: `install -r` needs same key
 6. `--ez home true`, then `cmd package set-home-activity com.wesbos.homehq/.Home`. Order matters
@@ -196,22 +196,26 @@ Frame stays offline for this whole session. It may already be online when first 
 8. `scripts/set-kiosk-access.sh`: URL + service token in one step (B2)
 9. Nav service if no nav bar. Don't make app device owner
 10. **Owner on panel:** two fingers held 1.5 s, an inch apart → Android settings opens, way back works. Must pass before step 11
-11. `pm disable-user --user 0` for `com.muxintu.app.mxota` and `net.frameo.frame`. Confirm ADB doesn't need Frameo first (`adb_enabled` = 1)
+11. `pm disable-user --user 0` for `com.muxintu.app.mxota` (if not already off) and `net.frameo.frame`. Confirm ADB doesn't need Frameo first (`adb_enabled` = 1)
 12. **Wait 30 s, check** `package-restrictions.xml` shows `enabled="3"` before reboot. Immediate reboot undid this on one unit. Same delay for Home alias
 13. Reboot. No adb in 150 s: ask owner to replug USB at frame end. Confirm kiosk is Home, both apps off
 
 Undo: `pm enable <pkg>`, `adb uninstall com.wesbos.homehq`, `wm density reset`, `svc power stayon false`, `--ez home false`.
 
-**Stop conditions, ask owner:** not `FRAME156` (`M15R4` on `rk3326`, Android 8.1 and firmware `FrameO.DP105F.*` has matched so far, one unit: tell owner, get an OK once). WebView under 106. Still `unauthorized` after step 2. Anything needing `/system`, Loader mode, a partition write, or key injection. (If so, offer pre-userdata backup first: about 10 min, method in record. Then owner decides.)
+**Stop conditions, ask owner:** not `FRAME156` (`M15R4` on `rk3326`, Android 8.1 and firmware `FrameO.DP105F.*` has matched so far, one unit: tell owner, get an OK once). WebView under 106. Still `unauthorized` after step 2. Anything needing `/system`, Loader mode, a partition write, or key injection. (If so, offer pre-userdata backup first: about 10 min, method in record. Run `svc power stayon true` before it starts, because step 4 hasn't happened yet and the frame idles off. Then owner decides.)
 
 ### WebView under 106
 
 Firmware `v2025052119` shipped WebView 61; the dashboard build target is `chrome106`. The Session 3 prompt doesn't approve what follows. Tell owner the options, get a clear yes to the one chosen.
 
 - **Exchange the frame.** Lowest risk, if returnable. A replacement may be the same firmware
+- **Build the dashboard for the older WebView.** No risky write to the frame. Never tried: it may not work or may look wrong, and then one of the other two is still open
 - **Replace WebView in `/system`.** Done once on `M15R4`; steps, traps and undo in the [record](pastigio-frame156.md#fifth-unit-m15r4-firmware-v2025052119-webview-61-2026-11-09). Reverses "no `/system` writes" for this frame only. Verified pre-userdata backup first. Restore needs Loader mode, untested
-- Target LineageOS WebView **106.0.5249.126**, the build target. 138 is the newest Android 8.1 can run, not needed here
-- A normal `adb install -r` is expected to fail: vendor-signed
+
+Claude's notes, not owner options:
+- Older build: set the JS `target` in `dashboard/vite.config.js` to `chrome61`, for this install only (CSS is already `chrome61`). It rewrites syntax only: missing browser functions stay missing (see [building-for-the-frame.md](building-for-the-frame.md)), and flex `gap`, which needs Chrome 84, isn't converted. Prove it on the panel before calling it done
+- `/system` swap: target LineageOS WebView **106.0.5249.126**, the build target. 138 is the newest Android 8.1 can run, not needed here
+- A normal `adb install -r` of a new WebView is expected to fail: vendor-signed
 
 ## Finish plan (Session 4)
 
